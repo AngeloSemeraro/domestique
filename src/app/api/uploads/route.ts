@@ -39,10 +39,12 @@ export async function POST(req: NextRequest) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    return NextResponse.json(
-      { error: data?.message ?? `strava ${res.status}`, raw: data },
-      { status: res.status }
-    );
+    let error = data?.message ?? `strava ${res.status}`;
+    if (res.status === 409 || /duplicate/i.test(String(data?.error ?? data?.message ?? ""))) {
+      const dup = data?.error ?? data?.message ?? "duplicate";
+      error = `Strava rejected the upload as a ${dup}. Delete the source activities on strava.com first, or use Download GPX.`;
+    }
+    return NextResponse.json({ error, raw: data }, { status: res.status });
   }
   return NextResponse.json(data);
 }

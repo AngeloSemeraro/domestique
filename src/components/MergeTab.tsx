@@ -702,6 +702,40 @@ export default function MergeTab() {
                 subtitle="Saves the .gpx file locally, no upload"
               />
             </div>
+            {output === "strava" &&
+              sources.some((s) => s.kind === "strava") && (
+                <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+                  <p className="mb-2 flex items-start gap-2 text-amber-700 dark:text-amber-300">
+                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                    <span>
+                      <strong>Strava will reject this as a duplicate</strong>{" "}
+                      of the existing rides (same start time + GPS). You must
+                      delete or hide them on strava.com first, or pick
+                      <em> Download GPX</em> instead.
+                    </span>
+                  </p>
+                  <ul className="space-y-0.5 pl-5 text-[color:var(--fg-muted)]">
+                    {sources
+                      .filter(
+                        (s): s is Extract<typeof sources[number], { kind: "strava" }> =>
+                          s.kind === "strava"
+                      )
+                      .map((s) => (
+                        <li key={s.key} className="flex items-center gap-2">
+                          <a
+                            href={`https://www.strava.com/activities/${s.activity.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 truncate hover:text-strava hover:underline"
+                          >
+                            {s.name}
+                            <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                          </a>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
           </fieldset>
 
           <fieldset className="mt-4 rounded-lg border border-[color:var(--border)] bg-[color:var(--bg-input)] p-3">
@@ -1134,7 +1168,15 @@ async function pollUpload(id: number): Promise<number> {
     await new Promise((r) => setTimeout(r, 2000));
     const res = await fetch(`/api/uploads/${id}`);
     const data = await res.json().catch(() => ({}));
-    if (data.error) throw new Error(data.error);
+    if (data.error) {
+      const msg = String(data.error);
+      if (/duplicate/i.test(msg)) {
+        throw new Error(
+          `Strava: ${msg}. Delete the source activities on strava.com first, or use "Download GPX".`
+        );
+      }
+      throw new Error(msg);
+    }
     if (data.activity_id) return data.activity_id;
   }
   throw new Error("Upload still processing after 2 min — check Strava manually.");
