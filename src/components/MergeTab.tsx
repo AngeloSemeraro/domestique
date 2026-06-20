@@ -217,13 +217,13 @@ export default function MergeTab() {
         distance_km: f.streams.latlng
           ? streamDistanceKm(f.streams.latlng.data)
           : 0,
-        avg_kmh: streamAvgKmh(f.streams),
+        avg_kmh: streamAvgKmh(f.streams, movement),
         file: f,
       })),
     ];
     list.sort((a, b) => +new Date(a.start_date) - +new Date(b.start_date));
     return list;
-  }, [selectedActivities, files]);
+  }, [selectedActivities, files, movement]);
 
   useEffect(() => {
     if (sources.length >= 2 && !name) {

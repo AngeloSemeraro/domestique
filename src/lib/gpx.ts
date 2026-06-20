@@ -62,8 +62,23 @@ export function streamDistanceKm(latlng: Array<[number, number]>): number {
   return d;
 }
 
-/** Activity avg speed (km/h) from streams, using elapsed time. */
-export function streamAvgKmh(streams: Streams): number {
+/**
+ * Activity moving avg speed (km/h) from streams. Mirrors what bike
+ * computers (Wahoo, Garmin) and Strava show by default: distance /
+ * moving time, excluding stopped intervals (per-point speed outside
+ * [minKmh, maxKmh] is ignored). Pass `filter` to override the defaults.
+ */
+export function streamAvgKmh(
+  streams: Streams,
+  filter: MovementFilter = DEFAULT_MOVEMENT_FILTER
+): number {
+  const { km, sec } = filteredStats(streams, filter);
+  const hours = sec / 3600;
+  return hours > 0 ? km / hours : 0;
+}
+
+/** Like streamAvgKmh but uses the raw elapsed time (no movement filter). */
+export function streamElapsedAvgKmh(streams: Streams): number {
   const ll = streams.latlng?.data ?? [];
   const t = streams.time?.data ?? [];
   if (ll.length < 2 || t.length < 2) return 0;
