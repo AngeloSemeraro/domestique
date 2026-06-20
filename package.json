@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "date-fns": "^4.4.0",
+    "fit-file-parser": "^3.0.2",
     "geist": "^1.7.2",
     "iron-session": "^8.0.4",
     "lucide-react": "^1.21.0",

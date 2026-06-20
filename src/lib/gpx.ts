@@ -7,7 +7,6 @@ export type Streams = {
 };
 
 export type StreamedActivity = {
-  id: number;
   name: string;
   start_date: string;
   streams: Streams;
