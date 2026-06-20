@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   Bike,
+  Briefcase,
   Calendar,
   Check,
   ChevronDown,
@@ -15,9 +16,11 @@ import {
   MapPin,
   RefreshCw,
   Search,
+  Trophy,
   Wand2,
 } from "lucide-react";
-import type { StravaActivity, StravaGear } from "@/lib/strava";
+import type { ActivityUpdate, StravaActivity, StravaGear } from "@/lib/strava";
+import { workoutTypeForSport, type WorkoutKind } from "@/lib/workout-types";
 import { countryFromTimezone, ianaFromStravaTz } from "@/lib/timezone-country";
 import DatePickerPopover from "./DatePickerPopover";
 
@@ -48,6 +51,8 @@ type Update = {
   gear_id?: string;
   hide_from_home?: boolean;
   trainer?: boolean;
+  commute?: boolean;
+  workout_kind?: WorkoutKind;
 };
 
 type BatchProgress = {
@@ -216,32 +221,58 @@ export default function Editor({
       )
     )
       return;
+    const perActivity = ids.map((id) => {
+      const a = activities.find((x) => x.id === id);
+      const sport = update.sport_type ?? a?.sport_type ?? "";
+      const u: ActivityUpdate = {};
+      if (update.sport_type !== undefined) u.sport_type = update.sport_type;
+      if (update.gear_id !== undefined) u.gear_id = update.gear_id;
+      if (update.hide_from_home !== undefined)
+        u.hide_from_home = update.hide_from_home;
+      if (update.trainer !== undefined) u.trainer = update.trainer;
+      if (update.commute !== undefined) u.commute = update.commute;
+      if (update.workout_kind !== undefined) {
+        const wt = workoutTypeForSport(update.workout_kind, sport);
+        if (wt !== undefined) u.workout_type = wt;
+      }
+      return { id, update: u };
+    });
+
+    const skipped = perActivity.filter((p) => Object.keys(p.update).length === 0);
+    const queue = perActivity.filter((p) => Object.keys(p.update).length > 0);
+
     setRunning(true);
-    setProgress({ total: ids.length, done: 0, errors: [] });
+    setProgress({ total: queue.length, done: 0, errors: [] });
     const CHUNK = 5;
     let done = 0;
     const errors: BatchProgress["errors"] = [];
-    for (let i = 0; i < ids.length; i += CHUNK) {
-      const slice = ids.slice(i, i + CHUNK);
+    for (let i = 0; i < queue.length; i += CHUNK) {
+      const slice = queue.slice(i, i + CHUNK);
       const res = await fetch("/api/activities/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: slice, update }),
+        body: JSON.stringify({ updates: slice }),
       });
       const data = await res.json();
       for (const r of data.results ?? []) {
         done++;
         if (!r.ok) errors.push({ id: r.id, error: r.error });
       }
-      setProgress({ total: ids.length, done, errors: [...errors] });
+      setProgress({ total: queue.length, done, errors: [...errors] });
+    }
+    if (skipped.length > 0) {
+      console.info(
+        `Skipped ${skipped.length} activities where no field applied (e.g. workout_type on a Hike).`
+      );
     }
     setRunning(false);
     setActivities((prev) =>
-      prev.map((a) =>
-        selected.has(a.id) && !errors.find((e) => e.id === a.id)
-          ? { ...a, ...update }
-          : a
-      )
+      prev.map((a) => {
+        const entry = queue.find((q) => q.id === a.id);
+        if (!entry) return a;
+        if (errors.find((e) => e.id === a.id)) return a;
+        return { ...a, ...entry.update };
+      })
     );
   }
 
@@ -398,7 +429,7 @@ export default function Editor({
           badge={updateCount > 0 ? `${updateCount} field${updateCount > 1 ? "s" : ""}` : undefined}
         />
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
           <Field icon={<Activity className="h-3.5 w-3.5" />} label="Sport type">
             <SelectNative
               value={update.sport_type ?? ""}
@@ -470,6 +501,44 @@ export default function Editor({
               <option value="">— don't change —</option>
               <option value="true">Yes</option>
               <option value="false">No</option>
+            </SelectNative>
+          </Field>
+          <Field icon={<Briefcase className="h-3.5 w-3.5" />} label="Commute">
+            <SelectNative
+              value={
+                update.commute === undefined
+                  ? ""
+                  : update.commute
+                    ? "true"
+                    : "false"
+              }
+              onChange={(v) =>
+                setUpdate({
+                  ...update,
+                  commute: v === "" ? undefined : v === "true",
+                })
+              }
+            >
+              <option value="">— don't change —</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </SelectNative>
+          </Field>
+          <Field icon={<Trophy className="h-3.5 w-3.5" />} label="Activity type">
+            <SelectNative
+              value={update.workout_kind ?? ""}
+              onChange={(v) =>
+                setUpdate({
+                  ...update,
+                  workout_kind: (v || undefined) as WorkoutKind | undefined,
+                })
+              }
+            >
+              <option value="">— don't change —</option>
+              <option value="default">Default</option>
+              <option value="race">Race</option>
+              <option value="workout">Workout</option>
+              <option value="long_run">Long run (Run only)</option>
             </SelectNative>
           </Field>
         </div>

@@ -124,7 +124,12 @@ export type ActivityUpdate = {
   gear_id?: string;
   hide_from_home?: boolean;
   trainer?: boolean;
+  commute?: boolean;
+  workout_type?: number;
 };
+
+export type { WorkoutKind } from "./workout-types";
+export { workoutTypeForSport } from "./workout-types";
 
 export async function updateActivity(
   id: number,
