@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   Bike,
@@ -21,6 +21,12 @@ import {
 } from "lucide-react";
 import type { ActivityUpdate, StravaActivity, StravaGear } from "@/lib/strava";
 import { workoutTypeForSport, type WorkoutKind } from "@/lib/workout-types";
+import {
+  cachedGeo,
+  formatGeo,
+  geocodeQueue,
+  type GeoLocation,
+} from "@/lib/geocode-client";
 import DatePickerPopover from "./DatePickerPopover";
 
 const SPORT_TYPES = [
@@ -100,6 +106,10 @@ export default function Editor({
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<BatchProgress | null>(null);
 
+  const [geo, setGeo] = useState<Record<number, GeoLocation>>({});
+  const [geoProgress, setGeoProgress] = useState<{ done: number; total: number } | null>(null);
+  const geoAbortRef = useRef<(() => void) | null>(null);
+
   function applyPreset(p: (typeof PRESETS)[number]) {
     const now = new Date();
     if (p.days === "all") {
@@ -175,7 +185,15 @@ export default function Editor({
         return false;
       if (filters.location) {
         const q = filters.location.toLowerCase();
-        const loc = [a.location_city, a.location_state, a.location_country]
+        const g = geo[a.id];
+        const loc = [
+          a.location_city,
+          a.location_state,
+          a.location_country,
+          g?.city,
+          g?.state,
+          g?.country,
+        ]
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
@@ -183,7 +201,7 @@ export default function Editor({
       }
       return true;
     });
-  }, [activities, filters]);
+  }, [activities, filters, geo]);
 
   function toggleAll() {
     if (selected.size === filtered.length) {
@@ -277,6 +295,45 @@ export default function Editor({
     loadActivities();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    geoAbortRef.current?.();
+    if (activities.length === 0) {
+      setGeoProgress(null);
+      return;
+    }
+
+    const items: Array<{ id: number; lat: number; lng: number }> = [];
+    const seeded: Record<number, GeoLocation> = {};
+    for (const a of activities) {
+      const hasReal =
+        a.location_city || a.location_state || a.location_country;
+      if (hasReal) continue;
+      const ll = a.start_latlng;
+      if (!ll || ll.length !== 2) continue;
+      const [lat, lng] = ll;
+      const c = cachedGeo(lat, lng);
+      if (c) {
+        seeded[a.id] = c;
+      } else {
+        items.push({ id: a.id, lat, lng });
+      }
+    }
+    if (Object.keys(seeded).length > 0) {
+      setGeo((prev) => ({ ...prev, ...seeded }));
+    }
+    if (items.length === 0) {
+      setGeoProgress(null);
+      return;
+    }
+    setGeoProgress({ done: 0, total: items.length });
+    geoAbortRef.current = geocodeQueue(
+      items,
+      (id, g) => setGeo((prev) => ({ ...prev, [id]: g })),
+      (done, total) => setGeoProgress({ done, total })
+    );
+    return () => geoAbortRef.current?.();
+  }, [activities]);
 
   const updateCount = Object.values(update).filter((v) => v !== undefined).length;
   const progressPct = progress
@@ -400,6 +457,15 @@ export default function Editor({
           </button>
           {loadError && (
             <span className="text-sm text-red-500">{loadError}</span>
+          )}
+          {geoProgress && geoProgress.done < geoProgress.total && (
+            <span
+              className="inline-flex items-center gap-1.5 text-xs text-[color:var(--fg-muted)]"
+              title="Reverse-geocoding activity locations from coordinates via OpenStreetMap"
+            >
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Geocoding {geoProgress.done}/{geoProgress.total}
+            </span>
           )}
           <div className="ml-auto text-sm text-[color:var(--fg-muted)]">
             <span className="font-semibold text-[color:var(--fg)]">
@@ -644,9 +710,36 @@ export default function Editor({
                     {(a.distance / 1000).toFixed(1)} km
                   </td>
                   <td className="p-3 text-[color:var(--fg-muted)]">
-                    {[a.location_city, a.location_state, a.location_country]
-                      .filter(Boolean)
-                      .join(", ") || "—"}
+                    {(() => {
+                      const real = [
+                        a.location_city,
+                        a.location_state,
+                        a.location_country,
+                      ]
+                        .filter(Boolean)
+                        .join(", ");
+                      if (real) return real;
+                      const g = geo[a.id];
+                      if (g) {
+                        const text = formatGeo(g);
+                        return text ? (
+                          <span title="Reverse-geocoded from start coordinates">
+                            {text}
+                          </span>
+                        ) : (
+                          "—"
+                        );
+                      }
+                      const ll = a.start_latlng;
+                      if (ll && ll.length === 2 && geoProgress) {
+                        return (
+                          <span className="text-[color:var(--fg-muted)]/60">
+                            …
+                          </span>
+                        );
+                      }
+                      return "—";
+                    })()}
                   </td>
                   <td className="p-3 text-[color:var(--fg-muted)]">
                     {bikes.find((b) => b.id === a.gear_id)?.name ??
