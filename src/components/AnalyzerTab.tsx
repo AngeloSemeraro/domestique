@@ -115,6 +115,7 @@ export default function AnalyzerTab({
             name,
             start_date: file.start_date,
             streams: file.streams,
+            sport_hint: "Ride",
           },
         ],
         name,

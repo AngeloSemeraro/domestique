@@ -287,12 +287,14 @@ export default function MergeTab({
             name: s.name,
             start_date: s.start_date,
             streams: streamsById.get(s.activity.id)!,
+            sport_hint: s.activity.sport_type,
           };
         }
         return {
           name: s.name,
           start_date: s.start_date,
           streams: s.file.streams,
+          sport_hint: "Ride",
         };
       });
       const timingOpts: TimingOptions = resolveTiming(timing, sources, customKmh);
@@ -367,12 +369,14 @@ export default function MergeTab({
             name: s.name,
             start_date: s.start_date,
             streams: streamsById.get(s.activity.id)!,
+            sport_hint: s.activity.sport_type,
           };
         }
         return {
           name: s.name,
           start_date: s.start_date,
           streams: s.file.streams,
+          sport_hint: "Ride",
         };
       });
       const timingOpts: TimingOptions = resolveTiming(timing, sources, customKmh);

@@ -4,13 +4,25 @@ export type Streams = {
   altitude?: { data: Array<number | undefined> };
   heartrate?: { data: Array<number | undefined> };
   cadence?: { data: Array<number | undefined> };
+  temperature?: { data: Array<number | undefined> };
 };
 
 export type StreamedActivity = {
   name: string;
   start_date: string;
   streams: Streams;
+  /** Optional GPX <type> for the track. Defaults to "Biking" when omitted. */
+  sport_hint?: string;
 };
+
+/** Map a Strava sport_type to a GPX 1.1 <type> value Strava recognizes. */
+export function gpxTypeFromSport(sport: string | undefined): string {
+  if (!sport) return "Biking";
+  if (/Run|Walk|Hike/i.test(sport)) return "Running";
+  if (/Swim/i.test(sport)) return "Swimming";
+  if (/Ski|Snow/i.test(sport)) return "Skiing";
+  return "Biking";
+}
 
 export type TimingOptions =
   | { mode: "natural" }
@@ -265,6 +277,7 @@ export function buildMergedGpx(
     const alt = a.streams.altitude?.data ?? [];
     const hr = a.streams.heartrate?.data ?? [];
     const cad = a.streams.cadence?.data ?? [];
+    const temp = a.streams.temperature?.data ?? [];
 
     const baseTimeOffset = time[plan.start];
     const segStartMs = useContinuous
@@ -282,14 +295,17 @@ export function buildMergedGpx(
       const eleV = alt[i];
       const hrV = hr[i];
       const cadV = cad[i];
+      const tempV = temp[i];
       const eleTag = eleV !== undefined ? `<ele>${eleV}</ele>` : "";
       const hrTag =
         hrV !== undefined ? `<gpxtpx:hr>${Math.round(hrV)}</gpxtpx:hr>` : "";
       const cadTag =
         cadV !== undefined ? `<gpxtpx:cad>${Math.round(cadV)}</gpxtpx:cad>` : "";
+      const tempTag =
+        tempV !== undefined ? `<gpxtpx:atemp>${Math.round(tempV)}</gpxtpx:atemp>` : "";
       const ext =
-        hrTag || cadTag
-          ? `<extensions><gpxtpx:TrackPointExtension>${hrTag}${cadTag}</gpxtpx:TrackPointExtension></extensions>`
+        hrTag || cadTag || tempTag
+          ? `<extensions><gpxtpx:TrackPointExtension>${hrTag}${cadTag}${tempTag}</gpxtpx:TrackPointExtension></extensions>`
           : "";
       pts.push(
         `<trkpt lat="${lat}" lon="${lng}">${eleTag}<time>${iso}</time>${ext}</trkpt>`
@@ -305,9 +321,12 @@ export function buildMergedGpx(
     segs += `<trkseg>${pts.join("")}</trkseg>`;
   }
 
+  const sportHint = sorted.find((a) => a.sport_hint)?.sport_hint;
+  const trkType = gpxTypeFromSport(sportHint);
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="Strava Batch Editor" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">
 <metadata><time>${metadataTime}</time></metadata>
-<trk><name>${xmlEsc(trackName)}</name>${segs}</trk>
+<trk><name>${xmlEsc(trackName)}</name><type>${xmlEsc(trkType)}</type>${segs}</trk>
 </gpx>`;
 }

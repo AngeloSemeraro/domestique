@@ -25,6 +25,7 @@ export async function parseGpxFile(file: File): Promise<ParsedTrack> {
   const altitude: Array<number | undefined> = [];
   const heartrate: Array<number | undefined> = [];
   const cadence: Array<number | undefined> = [];
+  const temperature: Array<number | undefined> = [];
 
   const firstTimeStr = trkpts[0].getElementsByTagName("time")[0]?.textContent;
   if (!firstTimeStr) {
@@ -59,6 +60,11 @@ export async function parseGpxFile(file: File): Promise<ParsedTrack> {
       p.getElementsByTagNameNS("*", "cad")[0]?.textContent ??
       p.getElementsByTagName("cad")[0]?.textContent;
     cadence.push(cad ? parseFloat(cad) : undefined);
+
+    const atemp =
+      p.getElementsByTagNameNS("*", "atemp")[0]?.textContent ??
+      p.getElementsByTagName("atemp")[0]?.textContent;
+    temperature.push(atemp ? parseFloat(atemp) : undefined);
   }
 
   const trackName =
@@ -74,6 +80,7 @@ export async function parseGpxFile(file: File): Promise<ParsedTrack> {
       ...(altitude.some((v) => v !== undefined) ? { altitude: { data: altitude } } : {}),
       ...(heartrate.some((v) => v !== undefined) ? { heartrate: { data: heartrate } } : {}),
       ...(cadence.some((v) => v !== undefined) ? { cadence: { data: cadence } } : {}),
+      ...(temperature.some((v) => v !== undefined) ? { temperature: { data: temperature } } : {}),
     },
     point_count: latlng.length,
   };
@@ -87,6 +94,7 @@ type FitRecord = {
   enhanced_altitude?: number;
   heart_rate?: number;
   cadence?: number;
+  temperature?: number;
 };
 
 /** Parse a FIT file in the browser using fit-file-parser. */
@@ -120,6 +128,7 @@ export async function parseFitFile(file: File): Promise<ParsedTrack> {
   const altitude: Array<number | undefined> = [];
   const heartrate: Array<number | undefined> = [];
   const cadence: Array<number | undefined> = [];
+  const temperature: Array<number | undefined> = [];
 
   for (const r of withGps) {
     latlng.push([r.position_lat as number, r.position_long as number]);
@@ -128,6 +137,7 @@ export async function parseFitFile(file: File): Promise<ParsedTrack> {
     altitude.push(r.enhanced_altitude ?? r.altitude);
     heartrate.push(r.heart_rate);
     cadence.push(r.cadence);
+    temperature.push(r.temperature);
   }
 
   return {
@@ -139,6 +149,7 @@ export async function parseFitFile(file: File): Promise<ParsedTrack> {
       ...(altitude.some((v) => v !== undefined) ? { altitude: { data: altitude } } : {}),
       ...(heartrate.some((v) => v !== undefined) ? { heartrate: { data: heartrate } } : {}),
       ...(cadence.some((v) => v !== undefined) ? { cadence: { data: cadence } } : {}),
+      ...(temperature.some((v) => v !== undefined) ? { temperature: { data: temperature } } : {}),
     },
     point_count: latlng.length,
   };
