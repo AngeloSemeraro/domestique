@@ -12,7 +12,6 @@ import {
   EyeOff,
   Filter as FilterIcon,
   Loader2,
-  LogOut,
   MapPin,
   RefreshCw,
   Search,
@@ -79,13 +78,7 @@ function isoDay(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
-export default function Editor({
-  athleteName,
-  bikes,
-}: {
-  athleteName: string;
-  bikes: StravaGear[];
-}) {
+export default function Editor({ bikes }: { bikes: StravaGear[] }) {
   const today = isoDay(new Date());
   const monthAgo = isoDay(new Date(Date.now() - 30 * 86400 * 1000));
 
@@ -286,11 +279,6 @@ export default function Editor({
     );
   }
 
-  async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    location.href = "/";
-  }
-
   useEffect(() => {
     loadActivities();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -341,30 +329,7 @@ export default function Editor({
     : 0;
 
   return (
-    <main className="mx-auto max-w-7xl space-y-6 p-4 md:p-8">
-      <header className="animate-fade-in flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-strava text-white shadow-md shadow-strava/30">
-            <Activity className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">
-              Strava Batch Editor
-            </h1>
-            <p className="text-xs text-[color:var(--fg-muted)]">
-              {athleteName}
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={logout}
-          className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] px-3 py-1.5 text-sm transition-colors hover:bg-[color:var(--row-hover)]"
-        >
-          <LogOut className="h-3.5 w-3.5" />
-          Logout
-        </button>
-      </header>
-
+    <div className="space-y-6">
       <Card>
         <SectionHeader icon={<FilterIcon className="h-4 w-4" />} title="Filters" />
 
@@ -788,7 +753,7 @@ export default function Editor({
           </table>
         </div>
       </Card>
-    </main>
+    </div>
   );
 }
 

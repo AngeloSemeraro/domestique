@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/session";
 import LoginScreen from "@/components/LoginScreen";
-import Editor from "@/components/Editor";
+import AppShell from "@/components/AppShell";
 import { getAthlete } from "@/lib/strava";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,7 @@ export default async function Home() {
   try {
     const athlete = await getAthlete();
     return (
-      <Editor
+      <AppShell
         athleteName={`${athlete.firstname} ${athlete.lastname}`.trim()}
         bikes={athlete.bikes ?? []}
       />
