@@ -15,6 +15,7 @@ export type StravaActivity = {
   location_city: string | null;
   location_state: string | null;
   location_country: string | null;
+  timezone: string | null;
   gear_id: string | null;
   trainer: boolean;
   commute: boolean;

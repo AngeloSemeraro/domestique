@@ -18,6 +18,8 @@ import {
   Wand2,
 } from "lucide-react";
 import type { StravaActivity, StravaGear } from "@/lib/strava";
+import { countryFromTimezone, ianaFromStravaTz } from "@/lib/timezone-country";
+import DatePickerPopover from "./DatePickerPopover";
 
 const SPORT_TYPES = [
   "AlpineSki", "BackcountrySki", "Badminton", "Canoeing", "Crossfit",
@@ -169,10 +171,17 @@ export default function Editor({
         return false;
       if (filters.location) {
         const q = filters.location.toLowerCase();
-        const loc = [a.location_city, a.location_state, a.location_country]
+        const loc = [
+          a.location_city,
+          a.location_state,
+          a.location_country,
+          ianaFromStravaTz(a.timezone),
+          countryFromTimezone(a.timezone),
+        ]
           .filter(Boolean)
           .join(" ")
-          .toLowerCase();
+          .toLowerCase()
+          .replace(/_/g, " ");
         if (!loc.includes(q)) return false;
       }
       return true;
@@ -301,25 +310,19 @@ export default function Editor({
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
           <Field icon={<Calendar className="h-3.5 w-3.5" />} label="From">
-            <input
-              type="date"
-              disabled={filters.showAll}
+            <DatePickerPopover
               value={filters.after}
-              onChange={(e) =>
-                setFilters({ ...filters, after: e.target.value })
-              }
-              className={inputClass}
+              onChange={(v) => setFilters({ ...filters, after: v })}
+              disabled={filters.showAll}
+              label="From date"
             />
           </Field>
           <Field icon={<Calendar className="h-3.5 w-3.5" />} label="To">
-            <input
-              type="date"
-              disabled={filters.showAll}
+            <DatePickerPopover
               value={filters.before}
-              onChange={(e) =>
-                setFilters({ ...filters, before: e.target.value })
-              }
-              className={inputClass}
+              onChange={(v) => setFilters({ ...filters, before: v })}
+              disabled={filters.showAll}
+              label="To date"
             />
           </Field>
           <Field icon={<Activity className="h-3.5 w-3.5" />} label="Sport type">
@@ -354,7 +357,7 @@ export default function Editor({
                 setFilters({ ...filters, location: e.target.value })
               }
               className={inputClass}
-              placeholder="city / state / country"
+              placeholder="italy, rome, paris…"
             />
           </Field>
         </div>
@@ -582,7 +585,14 @@ export default function Editor({
                   <td className="p-3 text-[color:var(--fg-muted)]">
                     {[a.location_city, a.location_state, a.location_country]
                       .filter(Boolean)
-                      .join(", ") || "—"}
+                      .join(", ") ||
+                      (a.timezone
+                        ? `${ianaFromStravaTz(a.timezone).split("/").pop()?.replace(/_/g, " ")}${
+                            countryFromTimezone(a.timezone)
+                              ? `, ${countryFromTimezone(a.timezone)}`
+                              : ""
+                          }`
+                        : "—")}
                   </td>
                   <td className="p-3 text-[color:var(--fg-muted)]">
                     {bikes.find((b) => b.id === a.gear_id)?.name ??

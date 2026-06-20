@@ -32,13 +32,68 @@ body {
   color: var(--fg);
 }
 
-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.5);
+.rdp-strava {
+  --rdp-accent-color: #fc4c02;
+  --rdp-accent-background-color: rgba(252, 76, 2, 0.12);
+  --rdp-day-height: 2rem;
+  --rdp-day-width: 2rem;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.rdp-strava .rdp-caption_label,
+.rdp-strava .rdp-dropdown {
+  color: var(--fg);
+}
+
+.rdp-strava .rdp-dropdowns {
+  gap: 0.5rem;
+}
+
+.rdp-strava select.rdp-dropdown {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  color: var(--fg);
   cursor: pointer;
 }
 
-@media (prefers-color-scheme: dark) {
-  input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(0.8);
-  }
+.rdp-strava select.rdp-dropdown:hover {
+  border-color: var(--rdp-accent-color);
+}
+
+.rdp-strava .rdp-day,
+.rdp-strava .rdp-weekday {
+  color: var(--fg);
+}
+
+.rdp-strava .rdp-weekday {
+  color: var(--fg-muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rdp-strava .rdp-day_button {
+  border-radius: 0.5rem;
+  transition: background 120ms;
+}
+
+.rdp-strava .rdp-day_button:hover {
+  background: var(--row-hover);
+}
+
+.rdp-strava .rdp-day.rdp-selected .rdp-day_button {
+  background: var(--rdp-accent-color);
+  color: white;
+}
+
+.rdp-strava .rdp-day.rdp-today:not(.rdp-selected) .rdp-day_button {
+  color: var(--rdp-accent-color);
+  font-weight: 600;
+}
+
+.rdp-strava .rdp-chevron {
+  fill: var(--fg-muted);
 }

@@ -9,11 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "date-fns": "^4.4.0",
     "geist": "^1.7.2",
     "iron-session": "^8.0.4",
     "lucide-react": "^1.21.0",
     "next": "^15.5.7",
     "react": "^19.2.7",
+    "react-day-picker": "^10.0.1",
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
