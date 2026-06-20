@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import {
   buildMergedGpx,
+  buildMergedTcx,
   DEFAULT_MOVEMENT_FILTER,
   filteredStats,
   movingRuns,
@@ -114,18 +115,17 @@ export default function AnalyzerTab({
     };
   }, [file, movement]);
 
-  async function publish(target: "strava" | "download") {
+  async function publish(target: "strava" | "tcx" | "gpx") {
     if (!file) return;
     if (!name.trim()) {
       alert("Give the activity a name.");
       return;
     }
     try {
-      // If the file was sent from the Merge tab we still hold the raw per-
-      // source streams. Use them so the emitted GPX keeps a <trk> per source
-      // (otherwise re-emitting from the flattened single track collapses to
-      // 1 <trk> and Strava inflates the distance across cross-source jumps).
-      const sourcesForGpx =
+      // Keep the per-source streams when the file came from the Merge tab,
+      // so the distance odometer (TCX) and <trk> partitioning (GPX) skip
+      // cross-source teleports instead of summing them.
+      const sourcesForBuild =
         file.rawSources && file.rawSources.length > 0
           ? file.rawSources
           : [
@@ -136,24 +136,30 @@ export default function AnalyzerTab({
                 sport_hint: "Ride",
               },
             ];
-      const gpx = buildMergedGpx(
-        sourcesForGpx,
-        name,
-        { mode: "natural" },
-        movement
-      );
-      if (target === "download") {
+
+      if (target === "gpx") {
+        const gpx = buildMergedGpx(sourcesForBuild, name, { mode: "natural" }, movement);
         const filename = `${slug(name)}.gpx`;
-        triggerDownload(gpx, filename);
+        triggerDownload(gpx, filename, "application/gpx+xml");
         setStep({ kind: "done_download", filename });
         return;
       }
+
+      const tcx = buildMergedTcx(sourcesForBuild, name, { mode: "natural" }, movement);
+      if (target === "tcx") {
+        const filename = `${slug(name)}.tcx`;
+        triggerDownload(tcx, filename, "application/vnd.garmin.tcx+xml");
+        setStep({ kind: "done_download", filename });
+        return;
+      }
+
       setStep({ kind: "uploading" });
       const up = await fetch("/api/uploads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          gpx,
+          data: tcx,
+          dataType: "tcx",
           name,
           description,
           external_id: `sbe-analyzer-${Date.now()}`,
@@ -558,12 +564,20 @@ export default function AnalyzerTab({
                 Publish to Strava
               </button>
               <button
-                onClick={() => publish("download")}
+                onClick={() => publish("tcx")}
                 disabled={busy}
                 className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] px-4 py-1.5 text-sm font-medium transition-colors hover:border-strava hover:text-strava disabled:opacity-40"
               >
                 <Download className="h-3.5 w-3.5" />
-                Download filtered GPX
+                Download TCX
+              </button>
+              <button
+                onClick={() => publish("gpx")}
+                disabled={busy}
+                className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] px-4 py-1.5 text-sm font-medium transition-colors hover:border-strava hover:text-strava disabled:opacity-40"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download GPX
               </button>
               <StepStatus step={step} />
             </div>
@@ -858,8 +872,12 @@ function slug(s: string): string {
   );
 }
 
-function triggerDownload(text: string, filename: string) {
-  const blob = new Blob([text], { type: "application/gpx+xml" });
+function triggerDownload(
+  text: string,
+  filename: string,
+  mime = "application/gpx+xml"
+) {
+  const blob = new Blob([text], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

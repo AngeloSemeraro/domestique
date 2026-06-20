@@ -291,45 +291,53 @@ export function filteredStats(
   return { km, sec };
 }
 
+export type PlannedPoint = {
+  lat: number;
+  lng: number;
+  ms: number;
+  ele?: number;
+  hr?: number;
+  cad?: number;
+  temp?: number;
+  /** Cumulative distance in metres up to this point. Teleports (steps above
+   *  maxJumpKm) are NOT added, so the final value is the real ridden
+   *  distance — this is what TCX writes into <DistanceMeters>. */
+  distM: number;
+};
+
+export type PlannedGroup = {
+  activity: StreamedActivity;
+  points: PlannedPoint[];
+};
+
+const NO_FILTER: MovementFilter = {
+  enabled: false,
+  minKmh: 0,
+  maxKmh: Infinity,
+  minRunPoints: 1,
+  maxJumpKm: Infinity,
+  useCadence: false,
+  minAvgCadenceRpm: 0,
+  useHeartRate: false,
+  minAvgHeartRate: 0,
+};
+
 /**
- * Build a single GPX 1.1 document that stitches the given activities into
- * one track with one <trkseg> per activity, in chronological order.
- *
- * timing:
- *  - "natural": preserve each source's absolute timestamps (gaps between
- *    sources are kept as-is; Strava typically excludes them from moving
- *    time but they still appear in the elapsed timeline).
- *  - "target_kmh": concatenate segments end-to-end (no gaps) and uniformly
- *    rescale every per-point delta so the resulting total elapsed time
- *    yields avg = target km/h over the combined distance. Within each
- *    segment the relative pacing is preserved.
+ * Shared planning step for both GPX and TCX export. Applies the movement
+ * filter, orders sources chronologically, computes per-point absolute
+ * timestamps (respecting the timing mode) and a cumulative distance that
+ * skips teleports. Returns one group per source activity.
  */
-export function buildMergedGpx(
+export function planMergedGroups(
   activities: StreamedActivity[],
-  trackName: string,
-  timing: TimingOptions = { mode: "natural" },
-  movement: MovementFilter = {
-    enabled: false,
-    minKmh: 0,
-    maxKmh: Infinity,
-    minRunPoints: 1,
-    maxJumpKm: Infinity,
-    useCadence: false,
-    minAvgCadenceRpm: 0,
-    useHeartRate: false,
-    minAvgHeartRate: 0,
-  }
-): string {
+  timing: TimingOptions,
+  movement: MovementFilter
+): PlannedGroup[] {
   const sorted = [...activities].sort(
     (a, b) => +new Date(a.start_date) - +new Date(b.start_date)
   );
 
-  // Build the list of (source, run) pairs we'll emit.
-  type RunPlan = {
-    activity: StreamedActivity;
-    start: number;
-    end: number;
-  };
+  type RunPlan = { activity: StreamedActivity; start: number; end: number };
   const plans: RunPlan[] = [];
   for (const a of sorted) {
     const ll = a.streams.latlng?.data ?? [];
@@ -342,9 +350,9 @@ export function buildMergedGpx(
   }
 
   let scaleFactor = 1;
-  let cursorMs =
-    plans[0] ? +new Date(plans[0].activity.start_date) : Date.now();
+  let cursorMs = plans[0] ? +new Date(plans[0].activity.start_date) : Date.now();
   const useContinuous = timing.mode === "target_kmh";
+  const maxJumpKm = movement.maxJumpKm || Infinity;
 
   if (timing.mode === "target_kmh") {
     let totalKm = 0;
@@ -353,7 +361,8 @@ export function buildMergedGpx(
       const ll = p.activity.streams.latlng?.data ?? [];
       const t = p.activity.streams.time?.data ?? [];
       for (let i = p.start + 1; i <= p.end; i++) {
-        totalKm += haversineKm(ll[i - 1], ll[i]);
+        const step = haversineKm(ll[i - 1], ll[i]);
+        if (step <= maxJumpKm) totalKm += step;
       }
       totalOriginalSec += (t[p.end] ?? 0) - (t[p.start] ?? 0);
     }
@@ -361,24 +370,16 @@ export function buildMergedGpx(
     scaleFactor = totalOriginalSec > 0 ? targetSec / totalOriginalSec : 1;
   }
 
-  const metadataTime = sorted[0]?.start_date ?? new Date().toISOString();
-  let segs = "";
-
-  // Group plans by their source activity (preserving order). We emit ONE
-  // <trkseg> per source — even when the movement filter has split that
-  // source into many runs — because Strava treats each trkseg as a sub-ride
-  // and would otherwise see 600+ tiny rides. Dropped points are simply
-  // omitted; the time gap between consecutive kept points encodes the
-  // pause and Strava reads that as auto-pause.
   const grouped: Array<{ activity: StreamedActivity; plans: RunPlan[] }> = [];
   for (const plan of plans) {
     const last = grouped[grouped.length - 1];
-    if (last && last.activity === plan.activity) {
-      last.plans.push(plan);
-    } else {
-      grouped.push({ activity: plan.activity, plans: [plan] });
-    }
+    if (last && last.activity === plan.activity) last.plans.push(plan);
+    else grouped.push({ activity: plan.activity, plans: [plan] });
   }
+
+  const out: PlannedGroup[] = [];
+  let cumulativeM = 0;
+  let prevLL: [number, number] | null = null;
 
   for (let gi = 0; gi < grouped.length; gi++) {
     const group = grouped[gi];
@@ -390,40 +391,34 @@ export function buildMergedGpx(
     const cad = a.streams.cadence?.data ?? [];
     const temp = a.streams.temperature?.data ?? [];
 
-    // Reference offset for this whole source group, so timestamps in
-    // continuous mode keep advancing across kept runs.
     const sourceBaseOffset = time[group.plans[0].start];
     const sourceStartMs = useContinuous
       ? cursorMs
       : +new Date(a.start_date) + sourceBaseOffset * 1000;
 
-    const pts: string[] = [];
+    const points: PlannedPoint[] = [];
     for (const plan of group.plans) {
       for (let i = plan.start; i <= plan.end; i++) {
         const ll = latlng[i];
         if (!ll || ll.length !== 2) continue;
         const [lat, lng] = ll;
+        if (prevLL) {
+          const stepKm = haversineKm(prevLL, [lat, lng]);
+          if (stepKm <= maxJumpKm) cumulativeM += stepKm * 1000;
+        }
+        prevLL = [lat, lng];
         const tRaw = time[i] ?? i;
         const deltaSec = (tRaw - sourceBaseOffset) * scaleFactor;
-        const iso = new Date(sourceStartMs + deltaSec * 1000).toISOString();
-        const eleV = alt[i];
-        const hrV = hr[i];
-        const cadV = cad[i];
-        const tempV = temp[i];
-        const eleTag = eleV !== undefined ? `<ele>${eleV}</ele>` : "";
-        const hrTag =
-          hrV !== undefined ? `<gpxtpx:hr>${Math.round(hrV)}</gpxtpx:hr>` : "";
-        const cadTag =
-          cadV !== undefined ? `<gpxtpx:cad>${Math.round(cadV)}</gpxtpx:cad>` : "";
-        const tempTag =
-          tempV !== undefined ? `<gpxtpx:atemp>${Math.round(tempV)}</gpxtpx:atemp>` : "";
-        const ext =
-          hrTag || cadTag || tempTag
-            ? `<extensions><gpxtpx:TrackPointExtension>${hrTag}${cadTag}${tempTag}</gpxtpx:TrackPointExtension></extensions>`
-            : "";
-        pts.push(
-          `<trkpt lat="${lat}" lon="${lng}">${eleTag}<time>${iso}</time>${ext}</trkpt>`
-        );
+        points.push({
+          lat,
+          lng,
+          ms: sourceStartMs + deltaSec * 1000,
+          ele: alt[i],
+          hr: hr[i],
+          cad: cad[i],
+          temp: temp[i],
+          distM: cumulativeM,
+        });
       }
     }
 
@@ -442,8 +437,7 @@ export function buildMergedGpx(
           nextGroup.activity.streams.latlng?.data?.[nextStart] ?? lastLL;
         const jumpKm = haversineKm(lastLL, nextLL);
         const minBoundarySec = (jumpKm / 120) * 3600;
-        const lastMs =
-          +new Date(a.start_date) + sourceEndOffset * 1000;
+        const lastMs = +new Date(a.start_date) + sourceEndOffset * 1000;
         const nextMs =
           +new Date(nextGroup.activity.start_date) +
           (nextGroup.activity.streams.time?.data?.[nextStart] ?? 0) * 1000;
@@ -453,13 +447,53 @@ export function buildMergedGpx(
       cursorMs = sourceEndMs + gapSec * 1000;
     }
 
-    // Each source becomes its own <trk> (not just trkseg). Strava treats
-    // multiple <trk> as separate continuous trajectories — distances are
-    // summed within each <trk> only, so a 100 km teleport between source
-    // files cannot inflate the total.
-    const sportHint = a.sport_hint;
-    const trkType = gpxTypeFromSport(sportHint);
-    segs += `<trk><name>${xmlEsc(a.name)}</name><type>${xmlEsc(trkType)}</type><trkseg>${pts.join("")}</trkseg></trk>`;
+    if (points.length > 0) out.push({ activity: a, points });
+  }
+
+  return out;
+}
+
+/**
+ * Build a single GPX 1.1 document. NOTE: GPX has no distance field, so Strava
+ * recomputes distance by summing GPS points — including any teleport between
+ * sources. Use buildMergedTcx for Strava uploads where the total must exclude
+ * unrecorded transfers.
+ */
+export function buildMergedGpx(
+  activities: StreamedActivity[],
+  trackName: string,
+  timing: TimingOptions = { mode: "natural" },
+  movement: MovementFilter = NO_FILTER
+): string {
+  const groups = planMergedGroups(activities, timing, movement);
+  const metadataTime =
+    groups[0]?.points[0] !== undefined
+      ? new Date(groups[0].points[0].ms).toISOString()
+      : new Date().toISOString();
+
+  let segs = "";
+  for (const group of groups) {
+    const pts = group.points
+      .map((p) => {
+        const iso = new Date(p.ms).toISOString();
+        const eleTag = p.ele !== undefined ? `<ele>${p.ele}</ele>` : "";
+        const hrTag =
+          p.hr !== undefined ? `<gpxtpx:hr>${Math.round(p.hr)}</gpxtpx:hr>` : "";
+        const cadTag =
+          p.cad !== undefined ? `<gpxtpx:cad>${Math.round(p.cad)}</gpxtpx:cad>` : "";
+        const tempTag =
+          p.temp !== undefined
+            ? `<gpxtpx:atemp>${Math.round(p.temp)}</gpxtpx:atemp>`
+            : "";
+        const ext =
+          hrTag || cadTag || tempTag
+            ? `<extensions><gpxtpx:TrackPointExtension>${hrTag}${cadTag}${tempTag}</gpxtpx:TrackPointExtension></extensions>`
+            : "";
+        return `<trkpt lat="${p.lat}" lon="${p.lng}">${eleTag}<time>${iso}</time>${ext}</trkpt>`;
+      })
+      .join("");
+    const trkType = gpxTypeFromSport(group.activity.sport_hint);
+    segs += `<trk><name>${xmlEsc(group.activity.name)}</name><type>${xmlEsc(trkType)}</type><trkseg>${pts}</trkseg></trk>`;
   }
 
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -467,4 +501,66 @@ export function buildMergedGpx(
 <metadata><name>${xmlEsc(trackName)}</name><time>${metadataTime}</time></metadata>
 ${segs}
 </gpx>`;
+}
+
+function tcxSport(sport: string | undefined): string {
+  const t = gpxTypeFromSport(sport);
+  if (t === "Running") return "Running";
+  return "Biking";
+}
+
+/**
+ * Build a TCX document. Unlike GPX, every Trackpoint carries a cumulative
+ * <DistanceMeters> (an odometer that skips teleports), and each source
+ * becomes a <Lap> with its own TotalTimeSeconds / DistanceMeters. Strava
+ * trusts these distance fields instead of recomputing from GPS, so the
+ * unrecorded transfer between two source rides never inflates the total —
+ * this is how GOTOES (which uploads FIT, same principle) gets it right.
+ */
+export function buildMergedTcx(
+  activities: StreamedActivity[],
+  trackName: string,
+  timing: TimingOptions = { mode: "natural" },
+  movement: MovementFilter = NO_FILTER
+): string {
+  const groups = planMergedGroups(activities, timing, movement);
+  const firstPt = groups[0]?.points[0];
+  const activityId = firstPt
+    ? new Date(firstPt.ms).toISOString()
+    : new Date().toISOString();
+  const sport = tcxSport(activities.find((a) => a.sport_hint)?.sport_hint);
+
+  let laps = "";
+  for (const group of groups) {
+    const pts = group.points;
+    if (pts.length === 0) continue;
+    const lapStartIso = new Date(pts[0].ms).toISOString();
+    const lapStartDist = pts[0].distM;
+    const lapEndDist = pts[pts.length - 1].distM;
+    const lapDistM = Math.max(0, lapEndDist - lapStartDist);
+    const lapSec = Math.max(0, (pts[pts.length - 1].ms - pts[0].ms) / 1000);
+
+    const trkpts = pts
+      .map((p) => {
+        const iso = new Date(p.ms).toISOString();
+        const pos = `<Position><LatitudeDegrees>${p.lat}</LatitudeDegrees><LongitudeDegrees>${p.lng}</LongitudeDegrees></Position>`;
+        const ele = p.ele !== undefined ? `<AltitudeMeters>${p.ele}</AltitudeMeters>` : "";
+        const dist = `<DistanceMeters>${p.distM.toFixed(2)}</DistanceMeters>`;
+        const hr =
+          p.hr !== undefined
+            ? `<HeartRateBpm><Value>${Math.round(p.hr)}</Value></HeartRateBpm>`
+            : "";
+        const cad =
+          p.cad !== undefined ? `<Cadence>${Math.min(254, Math.round(p.cad))}</Cadence>` : "";
+        return `<Trackpoint><Time>${iso}</Time>${pos}${ele}${dist}${hr}${cad}</Trackpoint>`;
+      })
+      .join("");
+
+    laps += `<Lap StartTime="${lapStartIso}"><TotalTimeSeconds>${lapSec.toFixed(0)}</TotalTimeSeconds><DistanceMeters>${lapDistM.toFixed(2)}</DistanceMeters><Intensity>Active</Intensity><TriggerMethod>Manual</TriggerMethod><Track>${trkpts}</Track></Lap>`;
+  }
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd">
+<Activities><Activity Sport="${sport}"><Id>${activityId}</Id><Notes>${xmlEsc(trackName)}</Notes>${laps}<Creator xsi:type="Device_t"><Name>Strava Batch Editor</Name></Creator></Activity></Activities>
+</TrainingCenterDatabase>`;
 }

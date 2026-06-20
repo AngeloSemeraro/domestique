@@ -21,6 +21,7 @@ import {
 import type { StravaActivity } from "@/lib/strava";
 import {
   buildMergedGpx,
+  buildMergedTcx,
   combineSourcesForDisplay,
   DEFAULT_MOVEMENT_FILTER,
   filteredStats,
@@ -51,7 +52,7 @@ type FileSource = {
   point_count: number;
 };
 
-type OutputMode = "strava" | "download";
+type OutputMode = "strava" | "tcx" | "gpx";
 
 type TimingChoice =
   | { kind: "natural" }
@@ -298,11 +299,23 @@ export default function MergeTab({
         };
       });
       const timingOpts: TimingOptions = resolveTiming(timing, sources, customKmh);
-      const gpx = buildMergedGpx(orderedForGpx, name, timingOpts, movement);
 
-      if (output === "download") {
+      if (output === "gpx") {
+        const gpx = buildMergedGpx(orderedForGpx, name, timingOpts, movement);
         const filename = `${slug(name)}-${isoDay(new Date())}.gpx`;
-        triggerDownload(gpx, filename);
+        triggerDownload(gpx, filename, "application/gpx+xml");
+        setStep({ kind: "done_download", filename });
+        return;
+      }
+
+      // TCX carries an explicit per-point DistanceMeters odometer that skips
+      // teleports, so Strava uses the real ridden distance instead of summing
+      // GPS points across unrecorded transfers.
+      const tcx = buildMergedTcx(orderedForGpx, name, timingOpts, movement);
+
+      if (output === "tcx") {
+        const filename = `${slug(name)}-${isoDay(new Date())}.tcx`;
+        triggerDownload(tcx, filename, "application/vnd.garmin.tcx+xml");
         setStep({ kind: "done_download", filename });
         return;
       }
@@ -312,7 +325,8 @@ export default function MergeTab({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          gpx,
+          data: tcx,
+          dataType: "tcx",
           name,
           description:
             description ||
@@ -793,20 +807,27 @@ export default function MergeTab({
             <legend className="mb-2 text-xs uppercase tracking-wider text-[color:var(--fg-muted)]">
               Output
             </legend>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <OutputCard
                 checked={output === "strava"}
                 onClick={() => setOutput("strava")}
                 icon={<Cloud className="h-4 w-4" />}
                 title="Upload to Strava"
-                subtitle="Creates a new activity on your account"
+                subtitle="As TCX — correct distance, skips transfers"
               />
               <OutputCard
-                checked={output === "download"}
-                onClick={() => setOutput("download")}
+                checked={output === "tcx"}
+                onClick={() => setOutput("tcx")}
                 icon={<Download className="h-4 w-4" />}
-                title="Download merged GPX"
-                subtitle="Saves the .gpx file locally, no upload"
+                title="Download TCX"
+                subtitle="Recommended — has the real distance odometer"
+              />
+              <OutputCard
+                checked={output === "gpx"}
+                onClick={() => setOutput("gpx")}
+                icon={<Download className="h-4 w-4" />}
+                title="Download GPX"
+                subtitle="No distance field; tools re-sum from GPS"
               />
             </div>
             {output === "strava" &&
@@ -1095,7 +1116,9 @@ export default function MergeTab({
                 ? "Working…"
                 : output === "strava"
                   ? "Merge & upload"
-                  : "Merge & download"}
+                  : output === "tcx"
+                    ? "Merge & download TCX"
+                    : "Merge & download GPX"}
             </button>
 
             {onSendToAnalyzer && (
@@ -1328,8 +1351,12 @@ function slug(s: string): string {
     .slice(0, 60) || "merged-ride";
 }
 
-function triggerDownload(text: string, filename: string) {
-  const blob = new Blob([text], { type: "application/gpx+xml" });
+function triggerDownload(
+  text: string,
+  filename: string,
+  mime = "application/gpx+xml"
+) {
+  const blob = new Blob([text], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
