@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import type { ActivityUpdate, StravaActivity, StravaGear } from "@/lib/strava";
 import { workoutTypeForSport, type WorkoutKind } from "@/lib/workout-types";
-import { countryFromTimezone, ianaFromStravaTz } from "@/lib/timezone-country";
 import DatePickerPopover from "./DatePickerPopover";
 
 const SPORT_TYPES = [
@@ -176,17 +175,10 @@ export default function Editor({
         return false;
       if (filters.location) {
         const q = filters.location.toLowerCase();
-        const loc = [
-          a.location_city,
-          a.location_state,
-          a.location_country,
-          ianaFromStravaTz(a.timezone),
-          countryFromTimezone(a.timezone),
-        ]
+        const loc = [a.location_city, a.location_state, a.location_country]
           .filter(Boolean)
           .join(" ")
-          .toLowerCase()
-          .replace(/_/g, " ");
+          .toLowerCase();
         if (!loc.includes(q)) return false;
       }
       return true;
@@ -388,7 +380,7 @@ export default function Editor({
                 setFilters({ ...filters, location: e.target.value })
               }
               className={inputClass}
-              placeholder="italy, rome, paris…"
+              placeholder="city, state, country"
             />
           </Field>
         </div>
@@ -654,14 +646,7 @@ export default function Editor({
                   <td className="p-3 text-[color:var(--fg-muted)]">
                     {[a.location_city, a.location_state, a.location_country]
                       .filter(Boolean)
-                      .join(", ") ||
-                      (a.timezone
-                        ? `${ianaFromStravaTz(a.timezone).split("/").pop()?.replace(/_/g, " ")}${
-                            countryFromTimezone(a.timezone)
-                              ? `, ${countryFromTimezone(a.timezone)}`
-                              : ""
-                          }`
-                        : "—")}
+                      .join(", ") || "—"}
                   </td>
                   <td className="p-3 text-[color:var(--fg-muted)]">
                     {bikes.find((b) => b.id === a.gear_id)?.name ??
