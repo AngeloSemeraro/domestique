@@ -11,6 +11,11 @@ import {
 } from "lucide-react";
 import type { StravaGear } from "@/lib/strava";
 import type { ParsedTrack } from "@/lib/file-parsers";
+import type { StreamedActivity } from "@/lib/gpx";
+
+export type AnalyzerSeed = ParsedTrack & {
+  rawSources?: StreamedActivity[];
+};
 import Editor from "./Editor";
 import MergeTab from "./MergeTab";
 import AnalyzerTab from "./AnalyzerTab";
@@ -33,7 +38,7 @@ export default function AppShell({
   bikes: StravaGear[];
 }) {
   const [tab, setTab] = useState<TabId>("edit");
-  const [analyzerSeed, setAnalyzerSeed] = useState<ParsedTrack | null>(null);
+  const [analyzerSeed, setAnalyzerSeed] = useState<AnalyzerSeed | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   async function logout() {
@@ -41,8 +46,8 @@ export default function AppShell({
     location.href = "/";
   }
 
-  function sendToAnalyzer(track: ParsedTrack) {
-    setAnalyzerSeed(track);
+  function sendToAnalyzer(seed: AnalyzerSeed) {
+    setAnalyzerSeed(seed);
     setTab("analyze");
   }
 

@@ -24,6 +24,70 @@ export function gpxTypeFromSport(sport: string | undefined): string {
   return "Biking";
 }
 
+/**
+ * Flatten multiple StreamedActivity sources into a single ParsedTrack-shaped
+ * object suitable for charts and stat displays. The combined `time` stream
+ * is in seconds offset from the first source's start, so display widgets
+ * see one continuous index sequence. Source boundaries are reflected as
+ * time jumps in the stream (the Analyzer's maxJumpKm-based heuristics will
+ * skip the corresponding distance/speed.)
+ */
+export function combineSourcesForDisplay(
+  sources: StreamedActivity[]
+): {
+  start_date: string;
+  streams: Streams;
+  point_count: number;
+} {
+  const sorted = [...sources].sort(
+    (a, b) => +new Date(a.start_date) - +new Date(b.start_date)
+  );
+  if (sorted.length === 0) {
+    return {
+      start_date: new Date().toISOString(),
+      streams: { latlng: { data: [] }, time: { data: [] } },
+      point_count: 0,
+    };
+  }
+  const baseMs = +new Date(sorted[0].start_date);
+  const latlng: Array<[number, number]> = [];
+  const time: number[] = [];
+  const altitude: Array<number | undefined> = [];
+  const heartrate: Array<number | undefined> = [];
+  const cadence: Array<number | undefined> = [];
+  const temperature: Array<number | undefined> = [];
+  for (const s of sorted) {
+    const srcMs = +new Date(s.start_date);
+    const offsetSec = Math.round((srcMs - baseMs) / 1000);
+    const sll = s.streams.latlng?.data ?? [];
+    const st = s.streams.time?.data ?? [];
+    const sa = s.streams.altitude?.data ?? [];
+    const sh = s.streams.heartrate?.data ?? [];
+    const sc = s.streams.cadence?.data ?? [];
+    const stmp = s.streams.temperature?.data ?? [];
+    for (let i = 0; i < sll.length; i++) {
+      latlng.push(sll[i]);
+      time.push(offsetSec + (st[i] ?? i));
+      altitude.push(sa[i]);
+      heartrate.push(sh[i]);
+      cadence.push(sc[i]);
+      temperature.push(stmp[i]);
+    }
+  }
+  return {
+    start_date: new Date(baseMs).toISOString(),
+    streams: {
+      latlng: { data: latlng },
+      time: { data: time },
+      ...(altitude.some((v) => v !== undefined) ? { altitude: { data: altitude } } : {}),
+      ...(heartrate.some((v) => v !== undefined) ? { heartrate: { data: heartrate } } : {}),
+      ...(cadence.some((v) => v !== undefined) ? { cadence: { data: cadence } } : {}),
+      ...(temperature.some((v) => v !== undefined) ? { temperature: { data: temperature } } : {}),
+    },
+    point_count: latlng.length,
+  };
+}
+
 export type TimingOptions =
   | { mode: "natural" }
   | { mode: "target_kmh"; kmh: number };

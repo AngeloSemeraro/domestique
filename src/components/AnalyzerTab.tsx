@@ -24,6 +24,7 @@ import {
   streamDistanceKm,
   type MovementFilter,
   type Streams,
+  type StreamedActivity,
 } from "@/lib/gpx";
 import { parseTrackFile, type ParsedTrack } from "@/lib/file-parsers";
 
@@ -35,13 +36,16 @@ type Step =
   | { kind: "done_download"; filename: string }
   | { kind: "error"; message: string };
 
-type Loaded = ParsedTrack & { filename: string };
+type Loaded = ParsedTrack & {
+  filename: string;
+  rawSources?: StreamedActivity[];
+};
 
 export default function AnalyzerTab({
   seed,
   onConsumeSeed,
 }: {
-  seed?: ParsedTrack | null;
+  seed?: (ParsedTrack & { rawSources?: StreamedActivity[] }) | null;
   onConsumeSeed?: () => void;
 }) {
   const [file, setFile] = useState<Loaded | null>(null);
@@ -55,7 +59,11 @@ export default function AnalyzerTab({
 
   useEffect(() => {
     if (seed) {
-      setFile({ ...seed, filename: `${seed.name}.gpx (from Merge)` });
+      setFile({
+        ...seed,
+        filename: `${seed.name}.gpx (from Merge)`,
+        rawSources: seed.rawSources,
+      });
       setName(seed.name);
       setParseError(null);
       setStep({ kind: "idle" });
@@ -113,15 +121,23 @@ export default function AnalyzerTab({
       return;
     }
     try {
+      // If the file was sent from the Merge tab we still hold the raw per-
+      // source streams. Use them so the emitted GPX keeps a <trk> per source
+      // (otherwise re-emitting from the flattened single track collapses to
+      // 1 <trk> and Strava inflates the distance across cross-source jumps).
+      const sourcesForGpx =
+        file.rawSources && file.rawSources.length > 0
+          ? file.rawSources
+          : [
+              {
+                name,
+                start_date: file.start_date,
+                streams: file.streams,
+                sport_hint: "Ride",
+              },
+            ];
       const gpx = buildMergedGpx(
-        [
-          {
-            name,
-            start_date: file.start_date,
-            streams: file.streams,
-            sport_hint: "Ride",
-          },
-        ],
+        sourcesForGpx,
         name,
         { mode: "natural" },
         movement

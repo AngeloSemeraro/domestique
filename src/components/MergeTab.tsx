@@ -21,19 +21,17 @@ import {
 import type { StravaActivity } from "@/lib/strava";
 import {
   buildMergedGpx,
+  combineSourcesForDisplay,
   DEFAULT_MOVEMENT_FILTER,
   filteredStats,
   streamAvgKmh,
   streamDistanceKm,
   type MovementFilter,
   type Streams,
+  type StreamedActivity,
   type TimingOptions,
 } from "@/lib/gpx";
-import {
-  parseGpxFile,
-  parseTrackFile,
-  type ParsedTrack,
-} from "@/lib/file-parsers";
+import { parseTrackFile, type ParsedTrack } from "@/lib/file-parsers";
 
 const RIDE_SPORTS = new Set([
   "Ride",
@@ -77,7 +75,9 @@ function isoDay(d: Date) {
 export default function MergeTab({
   onSendToAnalyzer,
 }: {
-  onSendToAnalyzer?: (track: ParsedTrack) => void;
+  onSendToAnalyzer?: (
+    seed: ParsedTrack & { rawSources?: StreamedActivity[] }
+  ) => void;
 }) {
   const today = new Date();
   const ninetyAgo = new Date(Date.now() - 90 * 86400 * 1000);
@@ -379,14 +379,19 @@ export default function MergeTab({
           sport_hint: "Ride",
         };
       });
-      const timingOpts: TimingOptions = resolveTiming(timing, sources, customKmh);
-      const gpx = buildMergedGpx(orderedForGpx, name, timingOpts, movement);
-      // Re-parse the GPX so the Analyzer sees it as a single, normalized track.
-      const blob = new File([gpx], `${slug(name)}.gpx`, {
-        type: "application/gpx+xml",
+      // Skip the GPX round-trip. parseGpxFile would flatten every <trk>
+      // back into one stream, and the Analyzer would later emit a single
+      // <trk> on download — collapsing our 3-trk structure. Instead, pass
+      // the raw orderedForGpx so the Analyzer can re-emit them as 3 <trk>
+      // when the user downloads or publishes.
+      const display = combineSourcesForDisplay(orderedForGpx);
+      onSendToAnalyzer({
+        name,
+        start_date: display.start_date,
+        streams: display.streams,
+        point_count: display.point_count,
+        rawSources: orderedForGpx,
       });
-      const parsed = await parseGpxFile(blob);
-      onSendToAnalyzer({ ...parsed, name });
       setStep({ kind: "idle" });
     } catch (e) {
       setStep({
