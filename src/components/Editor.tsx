@@ -13,10 +13,12 @@ import {
   Filter as FilterIcon,
   Loader2,
   MapPin,
+  Pencil,
   RefreshCw,
   Search,
   Trophy,
   Wand2,
+  X,
 } from "lucide-react";
 import type { ActivityUpdate, StravaActivity, StravaGear } from "@/lib/strava";
 import { workoutTypeForSport, type WorkoutKind } from "@/lib/workout-types";
@@ -667,14 +669,16 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
                     {a.start_date_local.slice(0, 10)}
                   </td>
                   <td className="p-3">
-                    <a
-                      href={`https://www.strava.com/activities/${a.id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-medium hover:text-strava hover:underline"
-                    >
-                      {a.name}
-                    </a>
+                    <NameCell
+                      activity={a}
+                      onRenamed={(newName) =>
+                        setActivities((prev) =>
+                          prev.map((x) =>
+                            x.id === a.id ? { ...x, name: newName } : x
+                          )
+                        )
+                      }
+                    />
                   </td>
                   <td className="p-3">
                     <span className="rounded-full bg-[color:var(--row-hover)] px-2 py-0.5 text-xs">
@@ -849,6 +853,120 @@ function SelectNative({
         {children}
       </select>
       <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--fg-muted)]" />
+    </div>
+  );
+}
+
+function NameCell({
+  activity,
+  onRenamed,
+}: {
+  activity: StravaActivity;
+  onRenamed: (newName: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(activity.name);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function startEdit() {
+    setDraft(activity.name);
+    setError(null);
+    setEditing(true);
+  }
+
+  async function save() {
+    const trimmed = draft.trim();
+    if (!trimmed || trimmed === activity.name) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/activities/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ids: [activity.id],
+          update: { name: trimmed },
+        }),
+      });
+      const data = await res.json();
+      const ok = data.results?.[0]?.ok;
+      if (!ok) {
+        throw new Error(data.results?.[0]?.error ?? "rename failed");
+      }
+      onRenamed(trimmed);
+      setEditing(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "rename failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1">
+        <input
+          autoFocus
+          value={draft}
+          disabled={saving}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") save();
+            else if (e.key === "Escape") setEditing(false);
+          }}
+          className="flex-1 rounded border border-strava bg-[color:var(--bg-input)] px-2 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-strava/20"
+        />
+        <button
+          onClick={save}
+          disabled={saving}
+          className="rounded p-1 text-emerald-500 hover:bg-emerald-500/10 disabled:opacity-50"
+          aria-label="Save"
+        >
+          {saving ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Check className="h-3.5 w-3.5" />
+          )}
+        </button>
+        <button
+          onClick={() => setEditing(false)}
+          disabled={saving}
+          className="rounded p-1 text-[color:var(--fg-muted)] hover:bg-[color:var(--row-hover)]"
+          aria-label="Cancel"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+        {error && (
+          <span className="text-xs text-red-500" title={error}>
+            !
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="group flex items-center gap-1.5">
+      <a
+        href={`https://www.strava.com/activities/${activity.id}`}
+        target="_blank"
+        rel="noreferrer"
+        className="font-medium hover:text-strava hover:underline"
+      >
+        {activity.name}
+      </a>
+      <button
+        onClick={startEdit}
+        className="opacity-0 transition-opacity hover:text-strava group-hover:opacity-100"
+        aria-label="Rename"
+        title="Rename activity"
+      >
+        <Pencil className="h-3 w-3" />
+      </button>
     </div>
   );
 }

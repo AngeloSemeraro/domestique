@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Trash2,
   Upload,
+  Wand2,
 } from "lucide-react";
 import type { StravaActivity } from "@/lib/strava";
 import {
@@ -28,7 +29,11 @@ import {
   type Streams,
   type TimingOptions,
 } from "@/lib/gpx";
-import { parseTrackFile, type ParsedTrack } from "@/lib/file-parsers";
+import {
+  parseGpxFile,
+  parseTrackFile,
+  type ParsedTrack,
+} from "@/lib/file-parsers";
 
 const RIDE_SPORTS = new Set([
   "Ride",
@@ -69,7 +74,11 @@ function isoDay(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-export default function MergeTab() {
+export default function MergeTab({
+  onSendToAnalyzer,
+}: {
+  onSendToAnalyzer?: (track: ParsedTrack) => void;
+}) {
   const today = new Date();
   const ninetyAgo = new Date(Date.now() - 90 * 86400 * 1000);
   const [after, setAfter] = useState(isoDay(ninetyAgo));
@@ -315,6 +324,66 @@ export default function MergeTab() {
       setStep({ kind: "processing", uploadId: upData.id });
       const activityId = await pollUpload(upData.id);
       setStep({ kind: "done_upload", activityId });
+    } catch (e) {
+      setStep({
+        kind: "error",
+        message: e instanceof Error ? e.message : "unknown error",
+      });
+    }
+  }
+
+  async function sendToAnalyzer() {
+    if (!onSendToAnalyzer) return;
+    if (sources.length < 2) return;
+    if (!name.trim()) {
+      alert("Give the merged activity a name first.");
+      return;
+    }
+    const stravaSources = sources.filter((s) => s.kind === "strava") as Array<
+      Extract<Source, { kind: "strava" }>
+    >;
+    setStep({ kind: "fetching", done: 0, total: stravaSources.length });
+    try {
+      const streamsById = new Map<number, Streams>();
+      for (let i = 0; i < stravaSources.length; i++) {
+        const a = stravaSources[i].activity;
+        const res = await fetch(`/api/streams/${a.id}`);
+        if (!res.ok) {
+          const e = await res.json().catch(() => ({}));
+          throw new Error(`Streams for ${a.name}: ${e.error ?? res.status}`);
+        }
+        const s = (await res.json()) as Streams;
+        if (!s.latlng?.data?.length) {
+          throw new Error(`"${a.name}" has no GPS track — can't merge.`);
+        }
+        streamsById.set(a.id, s);
+        setStep({ kind: "fetching", done: i + 1, total: stravaSources.length });
+        await new Promise((r) => setTimeout(r, 200));
+      }
+      setStep({ kind: "building" });
+      const orderedForGpx = sources.map((s) => {
+        if (s.kind === "strava") {
+          return {
+            name: s.name,
+            start_date: s.start_date,
+            streams: streamsById.get(s.activity.id)!,
+          };
+        }
+        return {
+          name: s.name,
+          start_date: s.start_date,
+          streams: s.file.streams,
+        };
+      });
+      const timingOpts: TimingOptions = resolveTiming(timing, sources, customKmh);
+      const gpx = buildMergedGpx(orderedForGpx, name, timingOpts, movement);
+      // Re-parse the GPX so the Analyzer sees it as a single, normalized track.
+      const blob = new File([gpx], `${slug(name)}.gpx`, {
+        type: "application/gpx+xml",
+      });
+      const parsed = await parseGpxFile(blob);
+      onSendToAnalyzer({ ...parsed, name });
+      setStep({ kind: "idle" });
     } catch (e) {
       setStep({
         kind: "error",
@@ -990,6 +1059,18 @@ export default function MergeTab() {
                   ? "Merge & upload"
                   : "Merge & download"}
             </button>
+
+            {onSendToAnalyzer && (
+              <button
+                onClick={sendToAnalyzer}
+                disabled={busy || sources.length < 2}
+                className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] px-4 py-1.5 text-sm font-medium transition-all hover:scale-[1.02] hover:border-strava hover:text-strava disabled:opacity-40"
+                title="Build the merged GPX and load it in the Analyzer tab without uploading"
+              >
+                <Wand2 className="h-3.5 w-3.5" />
+                Send to Analyzer
+              </button>
+            )}
 
             <StepStatus step={step} />
 

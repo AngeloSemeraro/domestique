@@ -123,6 +123,7 @@ export async function getAthlete(): Promise<StravaAthlete> {
 }
 
 export type ActivityUpdate = {
+  name?: string;
   sport_type?: string;
   gear_id?: string;
   hide_from_home?: boolean;

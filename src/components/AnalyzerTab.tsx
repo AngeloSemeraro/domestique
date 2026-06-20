@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   Check,
@@ -37,7 +37,13 @@ type Step =
 
 type Loaded = ParsedTrack & { filename: string };
 
-export default function AnalyzerTab() {
+export default function AnalyzerTab({
+  seed,
+  onConsumeSeed,
+}: {
+  seed?: ParsedTrack | null;
+  onConsumeSeed?: () => void;
+}) {
   const [file, setFile] = useState<Loaded | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [movement, setMovement] = useState<MovementFilter>(DEFAULT_MOVEMENT_FILTER);
@@ -45,6 +51,17 @@ export default function AnalyzerTab() {
   const [description, setDescription] = useState("");
   const [step, setStep] = useState<Step>({ kind: "idle" });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (seed) {
+      setFile({ ...seed, filename: `${seed.name}.gpx (from Merge)` });
+      setName(seed.name);
+      setParseError(null);
+      setStep({ kind: "idle" });
+      onConsumeSeed?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed]);
 
   async function handleFile(picked: FileList | null) {
     if (!picked || picked.length === 0) return;
