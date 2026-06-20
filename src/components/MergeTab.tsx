@@ -19,8 +19,11 @@ import {
 import type { StravaActivity } from "@/lib/strava";
 import {
   buildMergedGpx,
+  DEFAULT_MOVEMENT_FILTER,
+  filteredStats,
   streamAvgKmh,
   streamDistanceKm,
+  type MovementFilter,
   type Streams,
   type TimingOptions,
 } from "@/lib/gpx";
@@ -85,6 +88,8 @@ export default function MergeTab() {
   const [output, setOutput] = useState<OutputMode>("strava");
   const [timing, setTiming] = useState<TimingChoice>({ kind: "natural" });
   const [customKmh, setCustomKmh] = useState<string>("25");
+  const [movement, setMovement] = useState<MovementFilter>(DEFAULT_MOVEMENT_FILTER);
+  const [showMovementOpts, setShowMovementOpts] = useState(false);
   const [step, setStep] = useState<Step>({ kind: "idle" });
 
   async function load() {
@@ -279,7 +284,7 @@ export default function MergeTab() {
         };
       });
       const timingOpts: TimingOptions = resolveTiming(timing, sources, customKmh);
-      const gpx = buildMergedGpx(orderedForGpx, name, timingOpts);
+      const gpx = buildMergedGpx(orderedForGpx, name, timingOpts, movement);
 
       if (output === "download") {
         const filename = `${slug(name)}-${isoDay(new Date())}.gpx`;
@@ -331,6 +336,18 @@ export default function MergeTab() {
 
   const totalKm = sources.reduce((s, src) => s + src.distance_km, 0);
   const previewAvgKmh = computePreviewAvgKmh(timing, sources, customKmh);
+
+  const filterPreview = useMemo(() => {
+    if (!movement.enabled || files.length === 0) return null;
+    let keptKm = 0;
+    let totalKm = 0;
+    for (const f of files) {
+      const stats = filteredStats(f.streams, movement);
+      keptKm += stats.km;
+      totalKm += streamDistanceKm(f.streams.latlng?.data ?? []);
+    }
+    return { keptKm, totalKm };
+  }, [movement, files]);
 
   return (
     <div className="space-y-6">
@@ -635,6 +652,116 @@ export default function MergeTab() {
                 subtitle="Saves the .gpx file locally, no upload"
               />
             </div>
+          </fieldset>
+
+          <fieldset className="mt-4 rounded-lg border border-[color:var(--border)] bg-[color:var(--bg-input)] p-3">
+            <label className="flex cursor-pointer items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                checked={movement.enabled}
+                onChange={(e) =>
+                  setMovement({ ...movement, enabled: e.target.checked })
+                }
+                className="mt-0.5 accent-strava"
+              />
+              <div className="flex-1">
+                <p className="font-medium">
+                  Drop non-moving points (pauses, train, car…)
+                </p>
+                <p className="text-xs text-[color:var(--fg-muted)]">
+                  Splits each source into segments where per-point speed sits
+                  inside the chosen range. Useful when a recording includes a
+                  train commute or long stops.
+                </p>
+                {movement.enabled && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowMovementOpts((v) => !v)}
+                      className="mt-1 text-xs text-strava hover:underline"
+                    >
+                      {showMovementOpts
+                        ? "Hide thresholds"
+                        : `Thresholds: ${movement.minKmh}–${movement.maxKmh} km/h`}
+                    </button>
+                    {showMovementOpts && (
+                      <div className="mt-2 flex flex-wrap gap-3">
+                        <label className="flex items-center gap-1.5 text-xs">
+                          Min km/h
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={movement.minKmh}
+                            onChange={(e) =>
+                              setMovement({
+                                ...movement,
+                                minKmh: parseFloat(e.target.value) || 0,
+                              })
+                            }
+                            className="w-16 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-1.5 py-0.5"
+                          />
+                        </label>
+                        <label className="flex items-center gap-1.5 text-xs">
+                          Max km/h
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={movement.maxKmh}
+                            onChange={(e) =>
+                              setMovement({
+                                ...movement,
+                                maxKmh: parseFloat(e.target.value) || 0,
+                              })
+                            }
+                            className="w-16 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-1.5 py-0.5"
+                          />
+                        </label>
+                        <label className="flex items-center gap-1.5 text-xs">
+                          Min run pts
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={movement.minRunPoints}
+                            onChange={(e) =>
+                              setMovement({
+                                ...movement,
+                                minRunPoints:
+                                  parseInt(e.target.value, 10) || 1,
+                              })
+                            }
+                            className="w-16 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-1.5 py-0.5"
+                          />
+                        </label>
+                      </div>
+                    )}
+                    {filterPreview && (
+                      <p className="mt-2 text-xs text-[color:var(--fg-muted)]">
+                        File sources: kept{" "}
+                        <span className="font-semibold text-[color:var(--fg)]">
+                          {filterPreview.keptKm.toFixed(1)} km
+                        </span>{" "}
+                        of {filterPreview.totalKm.toFixed(1)} km
+                        {filterPreview.totalKm > filterPreview.keptKm && (
+                          <>
+                            {" "}· dropped{" "}
+                            <span className="font-semibold text-red-500">
+                              {(
+                                filterPreview.totalKm - filterPreview.keptKm
+                              ).toFixed(1)}{" "}
+                              km
+                            </span>
+                          </>
+                        )}
+                        . Strava sources are filtered at upload time.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            </label>
           </fieldset>
 
           <fieldset className="mt-4">

@@ -16,6 +16,20 @@ export type TimingOptions =
   | { mode: "natural" }
   | { mode: "target_kmh"; kmh: number };
 
+export type MovementFilter = {
+  enabled: boolean;
+  minKmh: number;
+  maxKmh: number;
+  minRunPoints: number;
+};
+
+export const DEFAULT_MOVEMENT_FILTER: MovementFilter = {
+  enabled: true,
+  minKmh: 3,
+  maxKmh: 80,
+  minRunPoints: 5,
+};
+
 const ESC: Record<string, string> = {
   "&": "&amp;",
   "<": "&lt;",
@@ -59,6 +73,62 @@ export function streamAvgKmh(streams: Streams): number {
 }
 
 /**
+ * Scan a stream and return the index ranges where movement looks valid
+ * (per-point speed inside [minKmh, maxKmh]). Drops noisy micro-runs.
+ */
+export function movingRuns(
+  streams: Streams,
+  filter: MovementFilter
+): Array<{ start: number; end: number }> {
+  const ll = streams.latlng?.data ?? [];
+  const t = streams.time?.data ?? [];
+  if (ll.length < 2 || t.length < 2) return [];
+
+  const runs: Array<{ start: number; end: number }> = [];
+  let runStart: number | null = null;
+
+  for (let i = 1; i < ll.length; i++) {
+    const dKm = haversineKm(ll[i - 1], ll[i]);
+    const dtH = (t[i] - t[i - 1]) / 3600;
+    const speedKmh = dtH > 0 ? dKm / dtH : 0;
+    const ok = speedKmh >= filter.minKmh && speedKmh <= filter.maxKmh;
+    if (ok) {
+      if (runStart === null) runStart = i - 1;
+    } else if (runStart !== null) {
+      runs.push({ start: runStart, end: i - 1 });
+      runStart = null;
+    }
+  }
+  if (runStart !== null) {
+    runs.push({ start: runStart, end: ll.length - 1 });
+  }
+  return runs.filter((r) => r.end - r.start + 1 >= filter.minRunPoints);
+}
+
+/** Distance (km) and elapsed time (seconds) kept by a movement filter. */
+export function filteredStats(
+  streams: Streams,
+  filter: MovementFilter
+): { km: number; sec: number } {
+  const runs = filter.enabled
+    ? movingRuns(streams, filter)
+    : streams.latlng?.data?.length
+      ? [{ start: 0, end: streams.latlng.data.length - 1 }]
+      : [];
+  const ll = streams.latlng?.data ?? [];
+  const t = streams.time?.data ?? [];
+  let km = 0;
+  let sec = 0;
+  for (const r of runs) {
+    for (let i = r.start + 1; i <= r.end; i++) {
+      km += haversineKm(ll[i - 1], ll[i]);
+    }
+    sec += (t[r.end] ?? 0) - (t[r.start] ?? 0);
+  }
+  return { km, sec };
+}
+
+/**
  * Build a single GPX 1.1 document that stitches the given activities into
  * one track with one <trkseg> per activity, in chronological order.
  *
@@ -74,25 +144,45 @@ export function streamAvgKmh(streams: Streams): number {
 export function buildMergedGpx(
   activities: StreamedActivity[],
   trackName: string,
-  timing: TimingOptions = { mode: "natural" }
+  timing: TimingOptions = { mode: "natural" },
+  movement: MovementFilter = { enabled: false, minKmh: 0, maxKmh: Infinity, minRunPoints: 1 }
 ): string {
   const sorted = [...activities].sort(
     (a, b) => +new Date(a.start_date) - +new Date(b.start_date)
   );
 
+  // Build the list of (source, run) pairs we'll emit.
+  type RunPlan = {
+    activity: StreamedActivity;
+    start: number;
+    end: number;
+  };
+  const plans: RunPlan[] = [];
+  for (const a of sorted) {
+    const ll = a.streams.latlng?.data ?? [];
+    const t = a.streams.time?.data ?? [];
+    if (ll.length === 0 || t.length === 0) continue;
+    const runs = movement.enabled
+      ? movingRuns(a.streams, movement)
+      : [{ start: 0, end: ll.length - 1 }];
+    for (const r of runs) plans.push({ activity: a, ...r });
+  }
+
   let scaleFactor = 1;
-  let cursorMs = sorted[0] ? +new Date(sorted[0].start_date) : Date.now();
+  let cursorMs =
+    plans[0] ? +new Date(plans[0].activity.start_date) : Date.now();
   const useContinuous = timing.mode === "target_kmh";
 
   if (timing.mode === "target_kmh") {
     let totalKm = 0;
     let totalOriginalSec = 0;
-    for (const a of sorted) {
-      const ll = a.streams.latlng?.data ?? [];
-      const t = a.streams.time?.data ?? [];
-      if (ll.length < 2 || t.length < 2) continue;
-      totalKm += streamDistanceKm(ll);
-      totalOriginalSec += t[t.length - 1] - t[0];
+    for (const p of plans) {
+      const ll = p.activity.streams.latlng?.data ?? [];
+      const t = p.activity.streams.time?.data ?? [];
+      for (let i = p.start + 1; i <= p.end; i++) {
+        totalKm += haversineKm(ll[i - 1], ll[i]);
+      }
+      totalOriginalSec += (t[p.end] ?? 0) - (t[p.start] ?? 0);
     }
     const targetSec = totalKm > 0 ? (totalKm / timing.kmh) * 3600 : 0;
     scaleFactor = totalOriginalSec > 0 ? targetSec / totalOriginalSec : 1;
@@ -101,21 +191,21 @@ export function buildMergedGpx(
   const metadataTime = sorted[0]?.start_date ?? new Date().toISOString();
   let segs = "";
 
-  for (const a of sorted) {
+  for (const plan of plans) {
+    const a = plan.activity;
     const latlng = a.streams.latlng?.data ?? [];
     const time = a.streams.time?.data ?? [];
     const alt = a.streams.altitude?.data ?? [];
     const hr = a.streams.heartrate?.data ?? [];
     const cad = a.streams.cadence?.data ?? [];
-    if (latlng.length === 0 || time.length === 0) continue;
 
-    const baseTimeOffset = time[0];
+    const baseTimeOffset = time[plan.start];
     const segStartMs = useContinuous
       ? cursorMs
-      : +new Date(a.start_date);
+      : +new Date(a.start_date) + baseTimeOffset * 1000;
 
     const pts: string[] = [];
-    for (let i = 0; i < latlng.length; i++) {
+    for (let i = plan.start; i <= plan.end; i++) {
       const ll = latlng[i];
       if (!ll || ll.length !== 2) continue;
       const [lat, lng] = ll;
@@ -138,7 +228,7 @@ export function buildMergedGpx(
 
     if (useContinuous) {
       const segDurationSec =
-        (time[time.length - 1] - baseTimeOffset) * scaleFactor;
+        (time[plan.end] - baseTimeOffset) * scaleFactor;
       cursorMs = segStartMs + segDurationSec * 1000 + 1000;
     }
 
