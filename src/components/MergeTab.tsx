@@ -224,7 +224,7 @@ export default function MergeTab({
         name: f.name,
         start_date: f.start_date,
         distance_km: f.streams.latlng
-          ? streamDistanceKm(f.streams.latlng.data)
+          ? streamDistanceKm(f.streams.latlng.data, 1)
           : 0,
         avg_kmh: streamAvgKmh(f.streams, movement),
         file: f,
@@ -421,7 +421,7 @@ export default function MergeTab({
     for (const f of files) {
       const stats = filteredStats(f.streams, movement);
       keptKm += stats.km;
-      totalKm += streamDistanceKm(f.streams.latlng?.data ?? []);
+      totalKm += streamDistanceKm(f.streams.latlng?.data ?? [], movement.maxJumpKm);
       const cadOk = movement.useCadence && (f.streams.cadence?.data?.length ?? 0) > 0;
       const hrOk = movement.useHeartRate && (f.streams.heartrate?.data?.length ?? 0) > 0;
       if (!cadOk && !hrOk) filesWithoutSignals++;

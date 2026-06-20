@@ -33,12 +33,16 @@ export type MovementFilter = {
   minKmh: number;
   maxKmh: number;
   minRunPoints: number;
+  /** Inter-point distances above this many km are treated as a teleport
+   *  (e.g. a phantom 100 km jump between two recording sessions) and force
+   *  a segment split. The jump itself is excluded from totals. */
+  maxJumpKm: number;
   /** If true and cadence stream exists, drop segments whose avg cadence
    *  is below `minAvgCadenceRpm` (treno/auto = 0 rpm sustained). */
   useCadence: boolean;
   minAvgCadenceRpm: number;
   /** If true and HR stream exists, drop segments whose avg HR is below
-   *  `minAvgHeartRate` bpm (sedentary on train/car ~60-80; riding >100). */
+   *  `minAvgHeartRate` bpm (sedentary on train/car ~60-95; riding >105). */
   useHeartRate: boolean;
   minAvgHeartRate: number;
 };
@@ -48,10 +52,11 @@ export const DEFAULT_MOVEMENT_FILTER: MovementFilter = {
   minKmh: 3,
   maxKmh: 80,
   minRunPoints: 5,
+  maxJumpKm: 1,
   useCadence: true,
   minAvgCadenceRpm: 10,
   useHeartRate: true,
-  minAvgHeartRate: 90,
+  minAvgHeartRate: 105,
 };
 
 function segmentAverage(
@@ -95,11 +100,17 @@ function haversineKm(a: [number, number], b: [number, number]): number {
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
-/** Total polyline distance in km of a latlng stream. */
-export function streamDistanceKm(latlng: Array<[number, number]>): number {
+/** Total polyline distance in km of a latlng stream. Pass `maxJumpKm` to
+ *  exclude single-point teleports (e.g. inter-session gaps). */
+export function streamDistanceKm(
+  latlng: Array<[number, number]>,
+  maxJumpKm?: number
+): number {
   let d = 0;
   for (let i = 1; i < latlng.length; i++) {
-    d += haversineKm(latlng[i - 1], latlng[i]);
+    const step = haversineKm(latlng[i - 1], latlng[i]);
+    if (maxJumpKm !== undefined && step > maxJumpKm) continue;
+    d += step;
   }
   return d;
 }
@@ -148,7 +159,9 @@ export function movingRuns(
     const dKm = haversineKm(ll[i - 1], ll[i]);
     const dtH = (t[i] - t[i - 1]) / 3600;
     const speedKmh = dtH > 0 ? dKm / dtH : 0;
-    const ok = speedKmh >= filter.minKmh && speedKmh <= filter.maxKmh;
+    const tooBig = dKm > (filter.maxJumpKm || Infinity);
+    const ok =
+      !tooBig && speedKmh >= filter.minKmh && speedKmh <= filter.maxKmh;
     if (ok) {
       if (runStart === null) runStart = i - 1;
     } else if (runStart !== null) {
@@ -236,6 +249,7 @@ export function buildMergedGpx(
     minKmh: 0,
     maxKmh: Infinity,
     minRunPoints: 1,
+    maxJumpKm: Infinity,
     useCadence: false,
     minAvgCadenceRpm: 0,
     useHeartRate: false,

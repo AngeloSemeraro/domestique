@@ -83,7 +83,10 @@ export default function AnalyzerTab({
   const analysis = useMemo(() => {
     if (!file) return null;
     const s = file.streams;
-    const totalKm = streamDistanceKm(s.latlng?.data ?? []);
+    const totalKm = streamDistanceKm(
+      s.latlng?.data ?? [],
+      movement.maxJumpKm
+    );
     const time = s.time?.data ?? [];
     const totalSec = time.length > 1 ? time[time.length - 1] - time[0] : 0;
     const runs = movement.enabled ? movingRuns(s, movement) : [];
@@ -339,6 +342,14 @@ export default function AnalyzerTab({
                     setMovement({ ...movement, minRunPoints: Math.max(1, v) })
                   }
                 />
+                <NumberField
+                  label="Max jump (km)"
+                  value={movement.maxJumpKm}
+                  step={0.5}
+                  onChange={(v) =>
+                    setMovement({ ...movement, maxJumpKm: Math.max(0.1, v) })
+                  }
+                />
                 <label className="col-span-2 flex items-center gap-2 md:col-span-3">
                   <input
                     type="checkbox"
@@ -441,7 +452,7 @@ export default function AnalyzerTab({
                 unit="km/h"
                 color="#fc4c02"
                 icon={<ActivityIcon className="h-3.5 w-3.5" />}
-                series={computeSpeedSeries(file.streams)}
+                series={computeSpeedSeries(file.streams, movement.maxJumpKm)}
                 runs={analysis.runs}
                 totalPoints={file.point_count}
               />
@@ -763,12 +774,19 @@ function isIndexKept(i: number, runs: Array<{ start: number; end: number }>): bo
   return false;
 }
 
-function computeSpeedSeries(streams: Streams): Array<number | null> {
+function computeSpeedSeries(
+  streams: Streams,
+  maxJumpKm = 1
+): Array<number | null> {
   const ll = streams.latlng?.data ?? [];
   const t = streams.time?.data ?? [];
   const out: Array<number | null> = new Array(ll.length).fill(null);
   for (let i = 1; i < ll.length; i++) {
     const dKm = haversineKm(ll[i - 1], ll[i]);
+    if (dKm > maxJumpKm) {
+      out[i] = null; // treat teleport as gap, not a 360k km/h spike
+      continue;
+    }
     const dtH = ((t[i] ?? i) - (t[i - 1] ?? i - 1)) / 3600;
     out[i] = dtH > 0 ? dKm / dtH : 0;
   }
