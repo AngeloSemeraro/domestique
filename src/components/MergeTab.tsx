@@ -17,7 +17,13 @@ import {
   Upload,
 } from "lucide-react";
 import type { StravaActivity } from "@/lib/strava";
-import { buildMergedGpx, type Streams } from "@/lib/gpx";
+import {
+  buildMergedGpx,
+  streamAvgKmh,
+  streamDistanceKm,
+  type Streams,
+  type TimingOptions,
+} from "@/lib/gpx";
 import { parseTrackFile, type ParsedTrack } from "@/lib/file-parsers";
 
 const RIDE_SPORTS = new Set([
@@ -39,6 +45,11 @@ type FileSource = {
 };
 
 type OutputMode = "strava" | "download";
+
+type TimingChoice =
+  | { kind: "natural" }
+  | { kind: "match"; key: string }
+  | { kind: "custom" };
 
 type Step =
   | { kind: "idle" }
@@ -72,6 +83,8 @@ export default function MergeTab() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [output, setOutput] = useState<OutputMode>("strava");
+  const [timing, setTiming] = useState<TimingChoice>({ kind: "natural" });
+  const [customKmh, setCustomKmh] = useState<string>("25");
   const [step, setStep] = useState<Step>({ kind: "idle" });
 
   async function load() {
@@ -156,8 +169,25 @@ export default function MergeTab() {
   );
 
   type Source =
-    | { kind: "strava"; key: string; name: string; start_date: string; distance_km?: number; moving_time?: number; activity: StravaActivity }
-    | { kind: "file"; key: string; name: string; start_date: string; file: FileSource };
+    | {
+        kind: "strava";
+        key: string;
+        name: string;
+        start_date: string;
+        distance_km: number;
+        moving_time: number;
+        avg_kmh: number;
+        activity: StravaActivity;
+      }
+    | {
+        kind: "file";
+        key: string;
+        name: string;
+        start_date: string;
+        distance_km: number;
+        avg_kmh: number;
+        file: FileSource;
+      };
 
   const sources = useMemo<Source[]>(() => {
     const list: Source[] = [
@@ -168,6 +198,7 @@ export default function MergeTab() {
         start_date: a.start_date,
         distance_km: a.distance / 1000,
         moving_time: a.moving_time,
+        avg_kmh: (a.average_speed ?? 0) * 3.6,
         activity: a,
       })),
       ...files.map<Source>((f) => ({
@@ -175,6 +206,10 @@ export default function MergeTab() {
         key: `f-${f.uid}`,
         name: f.name,
         start_date: f.start_date,
+        distance_km: f.streams.latlng
+          ? streamDistanceKm(f.streams.latlng.data)
+          : 0,
+        avg_kmh: streamAvgKmh(f.streams),
         file: f,
       })),
     ];
@@ -243,7 +278,8 @@ export default function MergeTab() {
           streams: s.file.streams,
         };
       });
-      const gpx = buildMergedGpx(orderedForGpx, name);
+      const timingOpts: TimingOptions = resolveTiming(timing, sources, customKmh);
+      const gpx = buildMergedGpx(orderedForGpx, name, timingOpts);
 
       if (output === "download") {
         const filename = `${slug(name)}-${isoDay(new Date())}.gpx`;
@@ -293,16 +329,8 @@ export default function MergeTab() {
     step.kind !== "done_download" &&
     step.kind !== "error";
 
-  const totalKm =
-    sources.reduce(
-      (s, src) => s + (src.kind === "strava" ? (src.distance_km ?? 0) : 0),
-      0
-    ) +
-    files.reduce(
-      (s, f) =>
-        s + (f.streams.latlng ? estimateDistanceKm(f.streams.latlng.data) : 0),
-      0
-    );
+  const totalKm = sources.reduce((s, src) => s + src.distance_km, 0);
+  const previewAvgKmh = computePreviewAvgKmh(timing, sources, customKmh);
 
   return (
     <div className="space-y-6">
@@ -609,6 +637,59 @@ export default function MergeTab() {
             </div>
           </fieldset>
 
+          <fieldset className="mt-4">
+            <legend className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wider text-[color:var(--fg-muted)]">
+              Average speed
+              <span className="rounded-full bg-[color:var(--row-hover)] px-2 py-0.5 text-[10px] normal-case tracking-normal text-[color:var(--fg)]">
+                Result ≈ {previewAvgKmh > 0 ? previewAvgKmh.toFixed(1) : "—"} km/h
+              </span>
+            </legend>
+            <div className="space-y-1.5">
+              <TimingRow
+                checked={timing.kind === "natural"}
+                onSelect={() => setTiming({ kind: "natural" })}
+                title="Natural (keep original timestamps)"
+                subtitle="Each source keeps its own pace; gaps between sources are preserved."
+              />
+              {sources.map((s) => (
+                <TimingRow
+                  key={s.key}
+                  checked={timing.kind === "match" && timing.key === s.key}
+                  onSelect={() => setTiming({ kind: "match", key: s.key })}
+                  title={`Match: ${s.name}`}
+                  subtitle={`Rescale total time so the merged ride averages ${s.avg_kmh > 0 ? s.avg_kmh.toFixed(1) : "?"} km/h.`}
+                  badge={s.avg_kmh > 0 ? `${s.avg_kmh.toFixed(1)} km/h` : "—"}
+                  disabled={!(s.avg_kmh > 0)}
+                />
+              ))}
+              <TimingRow
+                checked={timing.kind === "custom"}
+                onSelect={() => setTiming({ kind: "custom" })}
+                title="Custom target"
+                subtitle="Rescale total time to hit your own target km/h."
+                extra={
+                  timing.kind === "custom" && (
+                    <input
+                      type="number"
+                      min="1"
+                      step="0.1"
+                      value={customKmh}
+                      onChange={(e) => setCustomKmh(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-20 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-2 py-1 text-sm"
+                    />
+                  )
+                }
+              />
+            </div>
+            {timing.kind !== "natural" && (
+              <p className="mt-2 text-xs text-[color:var(--fg-muted)]">
+                Rescaling preserves the relative pacing inside each segment and
+                concatenates segments end-to-end with no gaps.
+              </p>
+            )}
+          </fieldset>
+
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <button
               onClick={runMerge}
@@ -645,6 +726,55 @@ export default function MergeTab() {
         </section>
       )}
     </div>
+  );
+}
+
+function TimingRow({
+  checked,
+  onSelect,
+  title,
+  subtitle,
+  badge,
+  extra,
+  disabled,
+}: {
+  checked: boolean;
+  onSelect: () => void;
+  title: string;
+  subtitle: string;
+  badge?: string;
+  extra?: React.ReactNode;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      disabled={disabled}
+      className={`flex w-full items-center gap-3 rounded-lg border p-2.5 text-left transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+        checked
+          ? "border-strava bg-strava/5"
+          : "border-[color:var(--border)] hover:border-[color:var(--fg-muted)]"
+      }`}
+    >
+      <span
+        className={`mt-0.5 flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-full border-2 ${
+          checked ? "border-strava" : "border-[color:var(--border)]"
+        }`}
+      >
+        {checked && <span className="h-1.5 w-1.5 rounded-full bg-strava" />}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="truncate text-sm font-medium">{title}</p>
+        <p className="text-xs text-[color:var(--fg-muted)]">{subtitle}</p>
+      </div>
+      {extra}
+      {badge && (
+        <span className="rounded-full bg-[color:var(--row-hover)] px-2 py-0.5 font-mono text-xs">
+          {badge}
+        </span>
+      )}
+    </button>
   );
 }
 
@@ -790,21 +920,39 @@ function triggerDownload(text: string, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function estimateDistanceKm(pts: Array<[number, number]>): number {
-  if (pts.length < 2) return 0;
-  const R = 6371;
-  let d = 0;
-  for (let i = 1; i < pts.length; i++) {
-    const [lat1, lng1] = pts[i - 1];
-    const [lat2, lng2] = pts[i];
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLng = ((lng2 - lng1) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLng / 2) ** 2;
-    d += 2 * R * Math.asin(Math.sqrt(a));
+function resolveTiming(
+  choice: TimingChoice,
+  sources: Array<{ key: string; avg_kmh: number }>,
+  customKmh: string
+): TimingOptions {
+  if (choice.kind === "natural") return { mode: "natural" };
+  if (choice.kind === "match") {
+    const src = sources.find((s) => s.key === choice.key);
+    const kmh = src?.avg_kmh ?? 0;
+    return kmh > 0 ? { mode: "target_kmh", kmh } : { mode: "natural" };
   }
-  return d;
+  const n = parseFloat(customKmh);
+  return n > 0 ? { mode: "target_kmh", kmh: n } : { mode: "natural" };
+}
+
+function computePreviewAvgKmh(
+  choice: TimingChoice,
+  sources: Array<{ key: string; avg_kmh: number; distance_km: number }>,
+  customKmh: string
+): number {
+  if (choice.kind === "match") {
+    return sources.find((s) => s.key === choice.key)?.avg_kmh ?? 0;
+  }
+  if (choice.kind === "custom") {
+    const n = parseFloat(customKmh);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }
+  // Natural: weighted by distance, approximates Strava's result
+  const totalKm = sources.reduce((s, x) => s + x.distance_km, 0);
+  if (totalKm <= 0) return 0;
+  const totalHours = sources.reduce(
+    (h, x) => h + (x.avg_kmh > 0 ? x.distance_km / x.avg_kmh : 0),
+    0
+  );
+  return totalHours > 0 ? totalKm / totalHours : 0;
 }

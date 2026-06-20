@@ -12,6 +12,8 @@ export type StravaActivity = {
   start_date_local: string;
   distance: number;
   moving_time: number;
+  elapsed_time: number;
+  average_speed: number;
   location_city: string | null;
   location_state: string | null;
   location_country: string | null;
