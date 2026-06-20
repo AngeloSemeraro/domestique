@@ -51,6 +51,7 @@ export default function AnalyzerTab({
   const [description, setDescription] = useState("");
   const [step, setStep] = useState<Step>({ kind: "idle" });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   useEffect(() => {
     if (seed) {
@@ -178,16 +179,54 @@ export default function AnalyzerTab({
         </div>
 
         {!file && (
-          <button
+          <div
             onClick={() => fileInputRef.current?.click()}
-            className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[color:var(--border)] p-10 transition-colors hover:border-strava hover:text-strava"
+            onDragEnter={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setDragOver(true);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+              setDragOver(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setDragOver(false);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setDragOver(false);
+              handleFile(e.dataTransfer.files);
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                fileInputRef.current?.click();
+              }
+            }}
+            className={`flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-10 transition-colors ${
+              dragOver
+                ? "border-strava bg-strava/5 text-strava"
+                : "border-[color:var(--border)] hover:border-strava hover:text-strava"
+            }`}
           >
             <FileUp className="h-6 w-6" />
-            <span className="text-sm font-medium">Drop or pick a .gpx / .fit</span>
+            <span className="text-sm font-medium">
+              {dragOver
+                ? "Drop to load"
+                : "Drop or click to pick a .gpx / .fit"}
+            </span>
             <span className="text-xs text-[color:var(--fg-muted)]">
               Parsed entirely in your browser; nothing is uploaded yet.
             </span>
-          </button>
+          </div>
         )}
         <input
           ref={fileInputRef}
