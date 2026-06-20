@@ -693,29 +693,58 @@ export default function MergeTab({
               Order (by start time)
             </p>
             <ol className="space-y-1">
-              {sources.map((s, i) => (
-                <li key={s.key} className="flex items-center gap-2">
-                  <span className="text-[color:var(--fg-muted)]">{i + 1}.</span>
-                  <span
-                    className={`rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wider ${
-                      s.kind === "strava"
-                        ? "bg-strava/10 text-strava"
-                        : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                    }`}
-                  >
-                    {s.kind === "strava" ? "Strava" : "File"}
-                  </span>
-                  <span className="font-mono text-xs text-[color:var(--fg-muted)]">
-                    {s.start_date.slice(0, 16).replace("T", " ")}
-                  </span>
-                  <span className="flex-1 truncate">{s.name}</span>
-                  {s.kind === "strava" && s.distance_km !== undefined && (
-                    <span className="font-mono text-xs text-[color:var(--fg-muted)]">
-                      {s.distance_km.toFixed(1)} km
-                    </span>
-                  )}
-                </li>
-              ))}
+              {sources.map((s, i) => {
+                const prev = i > 0 ? sources[i - 1] : null;
+                const prevLastLL = prev
+                  ? prev.kind === "strava"
+                    ? null
+                    : prev.file.streams.latlng?.data?.slice(-1)[0]
+                  : null;
+                const thisFirstLL =
+                  s.kind === "strava"
+                    ? null
+                    : s.file.streams.latlng?.data?.[0];
+                const jumpKm =
+                  prevLastLL && thisFirstLL
+                    ? haversineKm(prevLastLL, thisFirstLL)
+                    : null;
+                return (
+                  <li key={s.key} className="space-y-1">
+                    {jumpKm !== null && jumpKm > 1 && (
+                      <div className="flex items-center gap-2 rounded bg-amber-500/10 px-2 py-1 text-xs text-amber-700 dark:text-amber-300">
+                        <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                        <span>
+                          <strong>{jumpKm.toFixed(1)} km gap</strong> from
+                          previous source — this distance is unrecorded
+                          (car/train?) and will be added to Strava&apos;s total
+                          if merged.
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[color:var(--fg-muted)]">{i + 1}.</span>
+                      <span
+                        className={`rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wider ${
+                          s.kind === "strava"
+                            ? "bg-strava/10 text-strava"
+                            : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                        }`}
+                      >
+                        {s.kind === "strava" ? "Strava" : "File"}
+                      </span>
+                      <span className="font-mono text-xs text-[color:var(--fg-muted)]">
+                        {s.start_date.slice(0, 16).replace("T", " ")}
+                      </span>
+                      <span className="flex-1 truncate">{s.name}</span>
+                      {s.kind === "strava" && s.distance_km !== undefined && (
+                        <span className="font-mono text-xs text-[color:var(--fg-muted)]">
+                          {s.distance_km.toFixed(1)} km
+                        </span>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ol>
             <p className="mt-2 text-xs text-[color:var(--fg-muted)]">
               ≈ {totalKm.toFixed(1)} km
@@ -1270,6 +1299,18 @@ async function pollUpload(id: number): Promise<number> {
     if (data.activity_id) return data.activity_id;
   }
   throw new Error("Upload still processing after 2 min — check Strava manually.");
+}
+
+function haversineKm(a: [number, number], b: [number, number]): number {
+  const R = 6371;
+  const dLat = ((b[0] - a[0]) * Math.PI) / 180;
+  const dLng = ((b[1] - a[1]) * Math.PI) / 180;
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a[0] * Math.PI) / 180) *
+      Math.cos((b[0] * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
 }
 
 function formatDuration(s: number): string {
