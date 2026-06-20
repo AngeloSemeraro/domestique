@@ -391,6 +391,15 @@ export default function AnalyzerTab({
                   />
                   bpm {!analysis.hasHR && <span className="text-amber-500">— no data</span>}
                 </label>
+                {movement.useCadence && movement.useHeartRate && analysis.hasCad && analysis.hasHR && (
+                  <p className="col-span-2 text-xs text-[color:var(--fg-muted)] md:col-span-3">
+                    <Info className="mr-1 inline h-3 w-3" />
+                    A segment is dropped only when{" "}
+                    <strong>both</strong> cadence AND HR are below threshold.
+                    Long freewheel descents (cadence 0, HR still elevated) are
+                    kept; train/car (cadence 0 AND HR at rest) are dropped.
+                  </p>
+                )}
               </div>
             )}
 

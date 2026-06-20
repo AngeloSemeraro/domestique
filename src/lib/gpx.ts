@@ -163,14 +163,30 @@ export function movingRuns(
   const hr = streams.heartrate?.data;
   return runs.filter((r) => {
     if (r.end - r.start + 1 < filter.minRunPoints) return false;
-    if (filter.useCadence) {
-      const avg = segmentAverage(cad, r.start, r.end);
-      if (avg !== null && avg < filter.minAvgCadenceRpm) return false;
-    }
-    if (filter.useHeartRate) {
-      const avg = segmentAverage(hr, r.start, r.end);
-      if (avg !== null && avg < filter.minAvgHeartRate) return false;
-    }
+    // Combine cadence and HR checks: a segment is "non-cycling" only when
+    // BOTH signals agree. A long freewheel descent has cadence=0 but HR
+    // still elevated → kept. A train ride has cadence=0 AND HR at rest →
+    // dropped. If only one signal is enabled or only one is present in
+    // the stream, that one alone decides.
+    const cadFails =
+      filter.useCadence &&
+      (() => {
+        const avg = segmentAverage(cad, r.start, r.end);
+        return avg !== null && avg < filter.minAvgCadenceRpm;
+      })();
+    const hrFails =
+      filter.useHeartRate &&
+      (() => {
+        const avg = segmentAverage(hr, r.start, r.end);
+        return avg !== null && avg < filter.minAvgHeartRate;
+      })();
+    const cadEnabled =
+      filter.useCadence && segmentAverage(cad, r.start, r.end) !== null;
+    const hrEnabled =
+      filter.useHeartRate && segmentAverage(hr, r.start, r.end) !== null;
+    if (cadEnabled && hrEnabled) return !(cadFails && hrFails);
+    if (cadEnabled) return !cadFails;
+    if (hrEnabled) return !hrFails;
     return true;
   });
 }
