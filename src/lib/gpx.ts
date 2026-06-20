@@ -21,6 +21,10 @@ export type MovementFilter = {
   minKmh: number;
   maxKmh: number;
   minRunPoints: number;
+  /** If true and cadence stream exists, drop segments whose avg cadence
+   *  is below `minAvgCadenceRpm` (treno/auto = 0 rpm sustained). */
+  useCadence: boolean;
+  minAvgCadenceRpm: number;
 };
 
 export const DEFAULT_MOVEMENT_FILTER: MovementFilter = {
@@ -28,7 +32,26 @@ export const DEFAULT_MOVEMENT_FILTER: MovementFilter = {
   minKmh: 3,
   maxKmh: 80,
   minRunPoints: 5,
+  useCadence: true,
+  minAvgCadenceRpm: 10,
 };
+
+function segmentAvgCadence(
+  cad: number[] | undefined,
+  start: number,
+  end: number
+): number | null {
+  if (!cad) return null;
+  let sum = 0;
+  let count = 0;
+  for (let i = start; i <= end; i++) {
+    if (typeof cad[i] === "number") {
+      sum += cad[i];
+      count++;
+    }
+  }
+  return count > 0 ? sum / count : null;
+}
 
 const ESC: Record<string, string> = {
   "&": "&amp;",
@@ -117,7 +140,15 @@ export function movingRuns(
   if (runStart !== null) {
     runs.push({ start: runStart, end: ll.length - 1 });
   }
-  return runs.filter((r) => r.end - r.start + 1 >= filter.minRunPoints);
+  const cad = streams.cadence?.data;
+  return runs.filter((r) => {
+    if (r.end - r.start + 1 < filter.minRunPoints) return false;
+    if (filter.useCadence) {
+      const avg = segmentAvgCadence(cad, r.start, r.end);
+      if (avg !== null && avg < filter.minAvgCadenceRpm) return false;
+    }
+    return true;
+  });
 }
 
 /** Distance (km) and elapsed time (seconds) kept by a movement filter. */
@@ -160,7 +191,14 @@ export function buildMergedGpx(
   activities: StreamedActivity[],
   trackName: string,
   timing: TimingOptions = { mode: "natural" },
-  movement: MovementFilter = { enabled: false, minKmh: 0, maxKmh: Infinity, minRunPoints: 1 }
+  movement: MovementFilter = {
+    enabled: false,
+    minKmh: 0,
+    maxKmh: Infinity,
+    minRunPoints: 1,
+    useCadence: false,
+    minAvgCadenceRpm: 0,
+  }
 ): string {
   const sorted = [...activities].sort(
     (a, b) => +new Date(a.start_date) - +new Date(b.start_date)

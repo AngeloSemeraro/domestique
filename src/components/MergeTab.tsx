@@ -344,12 +344,14 @@ export default function MergeTab() {
     if (!movement.enabled || files.length === 0) return null;
     let keptKm = 0;
     let totalKm = 0;
+    let missingCadence = 0;
     for (const f of files) {
       const stats = filteredStats(f.streams, movement);
       keptKm += stats.km;
       totalKm += streamDistanceKm(f.streams.latlng?.data ?? []);
+      if (!f.streams.cadence?.data?.length) missingCadence++;
     }
-    return { keptKm, totalKm };
+    return { keptKm, totalKm, missingCadence };
   }, [movement, files]);
 
   return (
@@ -781,28 +783,69 @@ export default function MergeTab() {
                             className="w-16 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-1.5 py-0.5"
                           />
                         </label>
+                        <label className="flex w-full items-center gap-1.5 text-xs">
+                          <input
+                            type="checkbox"
+                            checked={movement.useCadence}
+                            onChange={(e) =>
+                              setMovement({
+                                ...movement,
+                                useCadence: e.target.checked,
+                              })
+                            }
+                            className="accent-strava"
+                          />
+                          Smart cadence check (drops train/car: avg cadence
+                          below
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={movement.minAvgCadenceRpm}
+                            disabled={!movement.useCadence}
+                            onChange={(e) =>
+                              setMovement({
+                                ...movement,
+                                minAvgCadenceRpm:
+                                  parseFloat(e.target.value) || 0,
+                              })
+                            }
+                            className="w-14 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-1.5 py-0.5 disabled:opacity-50"
+                          />
+                          rpm)
+                        </label>
                       </div>
                     )}
                     {filterPreview && (
-                      <p className="mt-2 text-xs text-[color:var(--fg-muted)]">
-                        File sources: kept{" "}
-                        <span className="font-semibold text-[color:var(--fg)]">
-                          {filterPreview.keptKm.toFixed(1)} km
-                        </span>{" "}
-                        of {filterPreview.totalKm.toFixed(1)} km
-                        {filterPreview.totalKm > filterPreview.keptKm && (
-                          <>
-                            {" "}· dropped{" "}
-                            <span className="font-semibold text-red-500">
-                              {(
-                                filterPreview.totalKm - filterPreview.keptKm
-                              ).toFixed(1)}{" "}
-                              km
-                            </span>
-                          </>
+                      <>
+                        <p className="mt-2 text-xs text-[color:var(--fg-muted)]">
+                          File sources: kept{" "}
+                          <span className="font-semibold text-[color:var(--fg)]">
+                            {filterPreview.keptKm.toFixed(1)} km
+                          </span>{" "}
+                          of {filterPreview.totalKm.toFixed(1)} km
+                          {filterPreview.totalKm > filterPreview.keptKm && (
+                            <>
+                              {" "}· dropped{" "}
+                              <span className="font-semibold text-red-500">
+                                {(
+                                  filterPreview.totalKm - filterPreview.keptKm
+                                ).toFixed(1)}{" "}
+                                km
+                              </span>
+                            </>
+                          )}
+                          . Strava sources are filtered at upload time.
+                        </p>
+                        {movement.useCadence && filterPreview.missingCadence > 0 && (
+                          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                            {filterPreview.missingCadence} file(s) without
+                            cadence data — speed-only filter applied. Train/car
+                            segments at 3–{movement.maxKmh} km/h may slip
+                            through unless you tighten Max km/h.
+                          </p>
                         )}
-                        . Strava sources are filtered at upload time.
-                      </p>
+                      </>
                     )}
                   </>
                 )}
