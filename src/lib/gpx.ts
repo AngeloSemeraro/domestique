@@ -300,9 +300,25 @@ export function buildMergedGpx(
   const metadataTime = sorted[0]?.start_date ?? new Date().toISOString();
   let segs = "";
 
-  for (let pi = 0; pi < plans.length; pi++) {
-    const plan = plans[pi];
-    const a = plan.activity;
+  // Group plans by their source activity (preserving order). We emit ONE
+  // <trkseg> per source — even when the movement filter has split that
+  // source into many runs — because Strava treats each trkseg as a sub-ride
+  // and would otherwise see 600+ tiny rides. Dropped points are simply
+  // omitted; the time gap between consecutive kept points encodes the
+  // pause and Strava reads that as auto-pause.
+  const grouped: Array<{ activity: StreamedActivity; plans: RunPlan[] }> = [];
+  for (const plan of plans) {
+    const last = grouped[grouped.length - 1];
+    if (last && last.activity === plan.activity) {
+      last.plans.push(plan);
+    } else {
+      grouped.push({ activity: plan.activity, plans: [plan] });
+    }
+  }
+
+  for (let gi = 0; gi < grouped.length; gi++) {
+    const group = grouped[gi];
+    const a = group.activity;
     const latlng = a.streams.latlng?.data ?? [];
     const time = a.streams.time?.data ?? [];
     const alt = a.streams.altitude?.data ?? [];
@@ -310,74 +326,67 @@ export function buildMergedGpx(
     const cad = a.streams.cadence?.data ?? [];
     const temp = a.streams.temperature?.data ?? [];
 
-    const baseTimeOffset = time[plan.start];
-    const segStartMs = useContinuous
+    // Reference offset for this whole source group, so timestamps in
+    // continuous mode keep advancing across kept runs.
+    const sourceBaseOffset = time[group.plans[0].start];
+    const sourceStartMs = useContinuous
       ? cursorMs
-      : +new Date(a.start_date) + baseTimeOffset * 1000;
+      : +new Date(a.start_date) + sourceBaseOffset * 1000;
 
     const pts: string[] = [];
-    for (let i = plan.start; i <= plan.end; i++) {
-      const ll = latlng[i];
-      if (!ll || ll.length !== 2) continue;
-      const [lat, lng] = ll;
-      const tRaw = time[i] ?? i;
-      const deltaSec = (tRaw - baseTimeOffset) * scaleFactor;
-      const iso = new Date(segStartMs + deltaSec * 1000).toISOString();
-      const eleV = alt[i];
-      const hrV = hr[i];
-      const cadV = cad[i];
-      const tempV = temp[i];
-      const eleTag = eleV !== undefined ? `<ele>${eleV}</ele>` : "";
-      const hrTag =
-        hrV !== undefined ? `<gpxtpx:hr>${Math.round(hrV)}</gpxtpx:hr>` : "";
-      const cadTag =
-        cadV !== undefined ? `<gpxtpx:cad>${Math.round(cadV)}</gpxtpx:cad>` : "";
-      const tempTag =
-        tempV !== undefined ? `<gpxtpx:atemp>${Math.round(tempV)}</gpxtpx:atemp>` : "";
-      const ext =
-        hrTag || cadTag || tempTag
-          ? `<extensions><gpxtpx:TrackPointExtension>${hrTag}${cadTag}${tempTag}</gpxtpx:TrackPointExtension></extensions>`
-          : "";
-      pts.push(
-        `<trkpt lat="${lat}" lon="${lng}">${eleTag}<time>${iso}</time>${ext}</trkpt>`
-      );
+    for (const plan of group.plans) {
+      for (let i = plan.start; i <= plan.end; i++) {
+        const ll = latlng[i];
+        if (!ll || ll.length !== 2) continue;
+        const [lat, lng] = ll;
+        const tRaw = time[i] ?? i;
+        const deltaSec = (tRaw - sourceBaseOffset) * scaleFactor;
+        const iso = new Date(sourceStartMs + deltaSec * 1000).toISOString();
+        const eleV = alt[i];
+        const hrV = hr[i];
+        const cadV = cad[i];
+        const tempV = temp[i];
+        const eleTag = eleV !== undefined ? `<ele>${eleV}</ele>` : "";
+        const hrTag =
+          hrV !== undefined ? `<gpxtpx:hr>${Math.round(hrV)}</gpxtpx:hr>` : "";
+        const cadTag =
+          cadV !== undefined ? `<gpxtpx:cad>${Math.round(cadV)}</gpxtpx:cad>` : "";
+        const tempTag =
+          tempV !== undefined ? `<gpxtpx:atemp>${Math.round(tempV)}</gpxtpx:atemp>` : "";
+        const ext =
+          hrTag || cadTag || tempTag
+            ? `<extensions><gpxtpx:TrackPointExtension>${hrTag}${cadTag}${tempTag}</gpxtpx:TrackPointExtension></extensions>`
+            : "";
+        pts.push(
+          `<trkpt lat="${lat}" lon="${lng}">${eleTag}<time>${iso}</time>${ext}</trkpt>`
+        );
+      }
     }
 
     if (useContinuous) {
-      const segDurationSec =
-        (time[plan.end] - baseTimeOffset) * scaleFactor;
-      const segEndMs = segStartMs + segDurationSec * 1000;
-      // Compute the gap to the next plan. Within the same source we trust the
-      // dropped-section duration as the real gap; across sources we use the
-      // wall-clock gap between source 1 end and source 2 start. Both get
-      // multiplied by the same scaleFactor so the output keeps the requested
-      // average. We never collapse a gap below the geographically-implied
-      // minimum (cap at 120 km/h across boundaries) so a 100 km source-to-
-      // source teleport can't show up as 360 000 km/h.
-      const next = plans[pi + 1];
+      const lastPlan = group.plans[group.plans.length - 1];
+      const sourceEndOffset = time[lastPlan.end];
+      const sourceDurationSec =
+        (sourceEndOffset - sourceBaseOffset) * scaleFactor;
+      const sourceEndMs = sourceStartMs + sourceDurationSec * 1000;
+      const nextGroup = grouped[gi + 1];
       let gapSec = 1;
-      if (next) {
-        const lastLL = latlng[plan.end];
+      if (nextGroup) {
+        const lastLL = latlng[lastPlan.end];
+        const nextStart = nextGroup.plans[0].start;
         const nextLL =
-          next.activity.streams.latlng?.data?.[next.start] ?? lastLL;
+          nextGroup.activity.streams.latlng?.data?.[nextStart] ?? lastLL;
         const jumpKm = haversineKm(lastLL, nextLL);
         const minBoundarySec = (jumpKm / 120) * 3600;
-        if (next.activity === a) {
-          const realDroppedSec =
-            (next.activity.streams.time?.data?.[next.start] ?? 0) -
-            (time[plan.end] ?? 0);
-          gapSec = Math.max(1, realDroppedSec * scaleFactor);
-        } else {
-          const lastMs =
-            +new Date(a.start_date) + (time[plan.end] ?? 0) * 1000;
-          const nextMs =
-            +new Date(next.activity.start_date) +
-            (next.activity.streams.time?.data?.[next.start] ?? 0) * 1000;
-          const realCrossSec = Math.max(0, (nextMs - lastMs) / 1000);
-          gapSec = Math.max(minBoundarySec, realCrossSec * scaleFactor, 1);
-        }
+        const lastMs =
+          +new Date(a.start_date) + sourceEndOffset * 1000;
+        const nextMs =
+          +new Date(nextGroup.activity.start_date) +
+          (nextGroup.activity.streams.time?.data?.[nextStart] ?? 0) * 1000;
+        const realCrossSec = Math.max(0, (nextMs - lastMs) / 1000);
+        gapSec = Math.max(minBoundarySec, realCrossSec * scaleFactor, 1);
       }
-      cursorMs = segEndMs + gapSec * 1000;
+      cursorMs = sourceEndMs + gapSec * 1000;
     }
 
     segs += `<trkseg>${pts.join("")}</trkseg>`;
