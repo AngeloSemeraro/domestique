@@ -324,18 +324,21 @@ export default function AnalyzerTab({
               <div className="mt-3 grid grid-cols-2 gap-3 text-xs md:grid-cols-3">
                 <NumberField
                   label="Min km/h"
+                  hint="below this = stop / pause"
                   value={movement.minKmh}
                   step={0.5}
                   onChange={(v) => setMovement({ ...movement, minKmh: v })}
                 />
                 <NumberField
                   label="Max km/h"
+                  hint="above this = car / train"
                   value={movement.maxKmh}
                   step={1}
                   onChange={(v) => setMovement({ ...movement, maxKmh: v })}
                 />
                 <NumberField
                   label="Min run pts"
+                  hint="ignore segments shorter than N points (anti-noise)"
                   value={movement.minRunPoints}
                   step={1}
                   onChange={(v) =>
@@ -344,6 +347,7 @@ export default function AnalyzerTab({
                 />
                 <NumberField
                   label="Max jump (km)"
+                  hint="distance between 2 points above this = teleport, skipped"
                   value={movement.maxJumpKm}
                   step={0.5}
                   onChange={(v) =>
@@ -374,7 +378,11 @@ export default function AnalyzerTab({
                     }
                     className="w-16 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-1.5 py-0.5 disabled:opacity-50"
                   />
-                  rpm {!analysis.hasCad && <span className="text-amber-500">— no data</span>}
+                  rpm
+                  <span className="text-[color:var(--fg-muted)] opacity-70">
+                    (≈ 0 sustained = not pedaling: train, car, parked)
+                  </span>
+                  {!analysis.hasCad && <span className="text-amber-500">— no data</span>}
                 </label>
                 <label className="col-span-2 flex items-center gap-2 md:col-span-3">
                   <input
@@ -400,7 +408,11 @@ export default function AnalyzerTab({
                     }
                     className="w-16 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-1.5 py-0.5 disabled:opacity-50"
                   />
-                  bpm {!analysis.hasHR && <span className="text-amber-500">— no data</span>}
+                  bpm
+                  <span className="text-[color:var(--fg-muted)] opacity-70">
+                    (below this = at rest: sitting, riding in vehicle)
+                  </span>
+                  {!analysis.hasHR && <span className="text-amber-500">— no data</span>}
                 </label>
                 {movement.useCadence && movement.useHeartRate && analysis.hasCad && analysis.hasHR && (
                   <p className="col-span-2 text-xs text-[color:var(--fg-muted)] md:col-span-3">
@@ -567,18 +579,25 @@ function SignalBadge({ present, label }: { present: boolean; label: string }) {
 
 function NumberField({
   label,
+  hint,
   value,
   step,
   onChange,
 }: {
   label: string;
+  hint?: string;
   value: number;
   step: number;
   onChange: (n: number) => void;
 }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[color:var(--fg-muted)]">{label}</span>
+      <span className="text-[color:var(--fg-muted)]">
+        {label}
+        {hint && (
+          <span className="ml-1 normal-case opacity-70">({hint})</span>
+        )}
+      </span>
       <input
         type="number"
         step={step}
