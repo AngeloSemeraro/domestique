@@ -90,6 +90,7 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
     nameQuery: "",
     location: "",
   });
+  const [activePreset, setActivePreset] = useState<string | null>("30d");
   const [activities, setActivities] = useState<StravaActivity[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -105,6 +106,7 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
 
   function applyPreset(p: (typeof PRESETS)[number]) {
     const now = new Date();
+    setActivePreset(p.label);
     if (p.days === "all") {
       setFilters((f) => ({ ...f, showAll: true }));
       return;
@@ -337,27 +339,32 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
           <span className="text-xs uppercase tracking-wider text-[color:var(--fg-muted)]">
             Quick range
           </span>
-          {PRESETS.map((p) => (
-            <button
-              key={p.label}
-              onClick={() => applyPreset(p)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-all hover:scale-105 active:scale-95 ${
-                (p.days === "all" && filters.showAll) ||
-                (p.days !== "all" && !filters.showAll)
-                  ? "border-strava/40"
-                  : "border-[color:var(--border)]"
-              } hover:border-strava hover:text-strava`}
-            >
-              {p.label}
-            </button>
-          ))}
+          {PRESETS.map((p) => {
+            const isActive = activePreset === p.label;
+            return (
+              <button
+                key={p.label}
+                onClick={() => applyPreset(p)}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-all hover:scale-105 active:scale-95 ${
+                  isActive
+                    ? "border-strava text-strava"
+                    : "border-[color:var(--border)] text-[color:var(--fg-muted)] hover:border-[color:var(--fg-muted)] hover:text-[color:var(--fg)]"
+                }`}
+              >
+                {p.label}
+              </button>
+            );
+          })}
         </div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
           <Field icon={<Calendar className="h-3.5 w-3.5" />} label="From">
             <DatePickerPopover
               value={filters.after}
-              onChange={(v) => setFilters({ ...filters, after: v })}
+              onChange={(v) => {
+                setActivePreset(null);
+                setFilters({ ...filters, after: v });
+              }}
               disabled={filters.showAll}
               label="From date"
             />
@@ -365,7 +372,10 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
           <Field icon={<Calendar className="h-3.5 w-3.5" />} label="To">
             <DatePickerPopover
               value={filters.before}
-              onChange={(v) => setFilters({ ...filters, before: v })}
+              onChange={(v) => {
+                setActivePreset(null);
+                setFilters({ ...filters, before: v });
+              }}
               disabled={filters.showAll}
               label="To date"
             />

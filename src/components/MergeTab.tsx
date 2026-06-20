@@ -5,6 +5,7 @@ import {
   AlertCircle,
   Bike,
   Check,
+  ChevronDown,
   Cloud,
   Download,
   ExternalLink,
@@ -78,6 +79,8 @@ export default function MergeTab() {
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [filesOpen, setFilesOpen] = useState(true);
+  const [ridesOpen, setRidesOpen] = useState(true);
 
   const [files, setFiles] = useState<FileSource[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -379,12 +382,28 @@ export default function MergeTab() {
 
       <section className="animate-fade-in rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-4 md:p-5 shadow-sm">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="font-semibold tracking-tight">
-            Local files{" "}
-            <span className="text-xs font-normal text-[color:var(--fg-muted)]">
-              .gpx / .fit
-            </span>
-          </h3>
+          <button
+            type="button"
+            onClick={() => setFilesOpen((v) => !v)}
+            className="group flex flex-1 items-center gap-2 text-left"
+          >
+            <ChevronDown
+              className={`h-4 w-4 text-[color:var(--fg-muted)] transition-transform ${
+                filesOpen ? "" : "-rotate-90"
+              }`}
+            />
+            <h3 className="font-semibold tracking-tight">
+              Local files{" "}
+              <span className="text-xs font-normal text-[color:var(--fg-muted)]">
+                .gpx / .fit
+              </span>
+            </h3>
+            {files.length > 0 && (
+              <span className="rounded-full bg-[color:var(--row-hover)] px-2 py-0.5 text-xs text-[color:var(--fg-muted)]">
+                {files.length}
+              </span>
+            )}
+          </button>
           <button
             onClick={() => fileInputRef.current?.click()}
             className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-[color:var(--border)] px-3 py-1.5 text-sm transition-colors hover:border-strava hover:text-strava"
@@ -401,7 +420,7 @@ export default function MergeTab() {
             onChange={(e) => handleFileSelect(e.target.files)}
           />
         </div>
-        {files.length === 0 ? (
+        {filesOpen && (files.length === 0 ? (
           <p className="text-sm text-[color:var(--fg-muted)]">
             No files added. Click <strong>Add file</strong> to include local
             GPX/FIT tracks in the merge.
@@ -435,15 +454,40 @@ export default function MergeTab() {
               </li>
             ))}
           </ul>
-        )}
+        ))}
         {fileError && (
           <p className="mt-2 text-xs text-red-500">{fileError}</p>
         )}
       </section>
 
       <section className="animate-fade-in rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-4 md:p-5 shadow-sm">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => setRidesOpen((v) => !v)}
+            className="flex flex-1 items-center gap-2 text-left"
+          >
+            <ChevronDown
+              className={`h-4 w-4 text-[color:var(--fg-muted)] transition-transform ${
+                ridesOpen ? "" : "-rotate-90"
+              }`}
+            />
+            <h3 className="font-semibold tracking-tight">Strava rides</h3>
+            {selectedIds.size > 0 && (
+              <span className="rounded-full bg-strava/10 px-2 py-0.5 text-xs font-medium text-strava">
+                {selectedIds.size} selected
+              </span>
+            )}
+            {activities.length > 0 && (
+              <span className="rounded-full bg-[color:var(--row-hover)] px-2 py-0.5 text-xs text-[color:var(--fg-muted)]">
+                {activities.length} loaded
+              </span>
+            )}
+          </button>
+        </div>
+        {ridesOpen && (
+        <>
         <div className="mb-3 flex flex-wrap items-end gap-3">
-          <h3 className="mr-2 font-semibold tracking-tight">Strava rides</h3>
           <label className="flex flex-col gap-1 text-xs">
             <span className="text-[color:var(--fg-muted)]">From</span>
             <input
@@ -552,6 +596,8 @@ export default function MergeTab() {
             </tbody>
           </table>
         </div>
+        </>
+        )}
       </section>
 
       {sources.length >= 2 && (
