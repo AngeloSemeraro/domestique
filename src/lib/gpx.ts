@@ -270,7 +270,8 @@ export function buildMergedGpx(
   const metadataTime = sorted[0]?.start_date ?? new Date().toISOString();
   let segs = "";
 
-  for (const plan of plans) {
+  for (let pi = 0; pi < plans.length; pi++) {
+    const plan = plans[pi];
     const a = plan.activity;
     const latlng = a.streams.latlng?.data ?? [];
     const time = a.streams.time?.data ?? [];
@@ -315,7 +316,38 @@ export function buildMergedGpx(
     if (useContinuous) {
       const segDurationSec =
         (time[plan.end] - baseTimeOffset) * scaleFactor;
-      cursorMs = segStartMs + segDurationSec * 1000 + 1000;
+      const segEndMs = segStartMs + segDurationSec * 1000;
+      // Compute the gap to the next plan. Within the same source we trust the
+      // dropped-section duration as the real gap; across sources we use the
+      // wall-clock gap between source 1 end and source 2 start. Both get
+      // multiplied by the same scaleFactor so the output keeps the requested
+      // average. We never collapse a gap below the geographically-implied
+      // minimum (cap at 120 km/h across boundaries) so a 100 km source-to-
+      // source teleport can't show up as 360 000 km/h.
+      const next = plans[pi + 1];
+      let gapSec = 1;
+      if (next) {
+        const lastLL = latlng[plan.end];
+        const nextLL =
+          next.activity.streams.latlng?.data?.[next.start] ?? lastLL;
+        const jumpKm = haversineKm(lastLL, nextLL);
+        const minBoundarySec = (jumpKm / 120) * 3600;
+        if (next.activity === a) {
+          const realDroppedSec =
+            (next.activity.streams.time?.data?.[next.start] ?? 0) -
+            (time[plan.end] ?? 0);
+          gapSec = Math.max(1, realDroppedSec * scaleFactor);
+        } else {
+          const lastMs =
+            +new Date(a.start_date) + (time[plan.end] ?? 0) * 1000;
+          const nextMs =
+            +new Date(next.activity.start_date) +
+            (next.activity.streams.time?.data?.[next.start] ?? 0) * 1000;
+          const realCrossSec = Math.max(0, (nextMs - lastMs) / 1000);
+          gapSec = Math.max(minBoundarySec, realCrossSec * scaleFactor, 1);
+        }
+      }
+      cursorMs = segEndMs + gapSec * 1000;
     }
 
     segs += `<trkseg>${pts.join("")}</trkseg>`;
