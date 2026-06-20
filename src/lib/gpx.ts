@@ -25,6 +25,10 @@ export type MovementFilter = {
    *  is below `minAvgCadenceRpm` (treno/auto = 0 rpm sustained). */
   useCadence: boolean;
   minAvgCadenceRpm: number;
+  /** If true and HR stream exists, drop segments whose avg HR is below
+   *  `minAvgHeartRate` bpm (sedentary on train/car ~60-80; riding >100). */
+  useHeartRate: boolean;
+  minAvgHeartRate: number;
 };
 
 export const DEFAULT_MOVEMENT_FILTER: MovementFilter = {
@@ -34,19 +38,21 @@ export const DEFAULT_MOVEMENT_FILTER: MovementFilter = {
   minRunPoints: 5,
   useCadence: true,
   minAvgCadenceRpm: 10,
+  useHeartRate: true,
+  minAvgHeartRate: 90,
 };
 
-function segmentAvgCadence(
-  cad: number[] | undefined,
+function segmentAverage(
+  arr: number[] | undefined,
   start: number,
   end: number
 ): number | null {
-  if (!cad) return null;
+  if (!arr) return null;
   let sum = 0;
   let count = 0;
   for (let i = start; i <= end; i++) {
-    if (typeof cad[i] === "number") {
-      sum += cad[i];
+    if (typeof arr[i] === "number") {
+      sum += arr[i];
       count++;
     }
   }
@@ -141,11 +147,16 @@ export function movingRuns(
     runs.push({ start: runStart, end: ll.length - 1 });
   }
   const cad = streams.cadence?.data;
+  const hr = streams.heartrate?.data;
   return runs.filter((r) => {
     if (r.end - r.start + 1 < filter.minRunPoints) return false;
     if (filter.useCadence) {
-      const avg = segmentAvgCadence(cad, r.start, r.end);
+      const avg = segmentAverage(cad, r.start, r.end);
       if (avg !== null && avg < filter.minAvgCadenceRpm) return false;
+    }
+    if (filter.useHeartRate) {
+      const avg = segmentAverage(hr, r.start, r.end);
+      if (avg !== null && avg < filter.minAvgHeartRate) return false;
     }
     return true;
   });
@@ -198,6 +209,8 @@ export function buildMergedGpx(
     minRunPoints: 1,
     useCadence: false,
     minAvgCadenceRpm: 0,
+    useHeartRate: false,
+    minAvgHeartRate: 0,
   }
 ): string {
   const sorted = [...activities].sort(

@@ -344,14 +344,16 @@ export default function MergeTab() {
     if (!movement.enabled || files.length === 0) return null;
     let keptKm = 0;
     let totalKm = 0;
-    let missingCadence = 0;
+    let filesWithoutSignals = 0;
     for (const f of files) {
       const stats = filteredStats(f.streams, movement);
       keptKm += stats.km;
       totalKm += streamDistanceKm(f.streams.latlng?.data ?? []);
-      if (!f.streams.cadence?.data?.length) missingCadence++;
+      const cadOk = movement.useCadence && (f.streams.cadence?.data?.length ?? 0) > 0;
+      const hrOk = movement.useHeartRate && (f.streams.heartrate?.data?.length ?? 0) > 0;
+      if (!cadOk && !hrOk) filesWithoutSignals++;
     }
-    return { keptKm, totalKm, missingCadence };
+    return { keptKm, totalKm, filesWithoutSignals };
   }, [movement, files]);
 
   return (
@@ -795,8 +797,7 @@ export default function MergeTab() {
                             }
                             className="accent-strava"
                           />
-                          Smart cadence check (drops train/car: avg cadence
-                          below
+                          Cadence check (drop segments with avg cadence below
                           <input
                             type="number"
                             min="0"
@@ -813,6 +814,36 @@ export default function MergeTab() {
                             className="w-14 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-1.5 py-0.5 disabled:opacity-50"
                           />
                           rpm)
+                        </label>
+                        <label className="flex w-full items-center gap-1.5 text-xs">
+                          <input
+                            type="checkbox"
+                            checked={movement.useHeartRate}
+                            onChange={(e) =>
+                              setMovement({
+                                ...movement,
+                                useHeartRate: e.target.checked,
+                              })
+                            }
+                            className="accent-strava"
+                          />
+                          HR check (drop segments with avg HR below
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={movement.minAvgHeartRate}
+                            disabled={!movement.useHeartRate}
+                            onChange={(e) =>
+                              setMovement({
+                                ...movement,
+                                minAvgHeartRate:
+                                  parseFloat(e.target.value) || 0,
+                              })
+                            }
+                            className="w-14 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-1.5 py-0.5 disabled:opacity-50"
+                          />
+                          bpm) — best universal filter for train/car
                         </label>
                       </div>
                     )}
@@ -837,12 +868,12 @@ export default function MergeTab() {
                           )}
                           . Strava sources are filtered at upload time.
                         </p>
-                        {movement.useCadence && filterPreview.missingCadence > 0 && (
+                        {filterPreview.filesWithoutSignals > 0 && (
                           <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                            {filterPreview.missingCadence} file(s) without
-                            cadence data — speed-only filter applied. Train/car
-                            segments at 3–{movement.maxKmh} km/h may slip
-                            through unless you tighten Max km/h.
+                            {filterPreview.filesWithoutSignals} file(s) without
+                            cadence{movement.useHeartRate ? " or HR" : ""} data
+                            — only the speed range can be used. Tighten Max
+                            km/h or pre-trim the file.
                           </p>
                         )}
                       </>
