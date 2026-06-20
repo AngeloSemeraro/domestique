@@ -1,9 +1,9 @@
 export type Streams = {
   latlng?: { data: Array<[number, number]> };
   time?: { data: number[] };
-  altitude?: { data: number[] };
-  heartrate?: { data: number[] };
-  cadence?: { data: number[] };
+  altitude?: { data: Array<number | undefined> };
+  heartrate?: { data: Array<number | undefined> };
+  cadence?: { data: Array<number | undefined> };
 };
 
 export type StreamedActivity = {
@@ -43,7 +43,7 @@ export const DEFAULT_MOVEMENT_FILTER: MovementFilter = {
 };
 
 function segmentAverage(
-  arr: number[] | undefined,
+  arr: Array<number | undefined> | undefined,
   start: number,
   end: number
 ): number | null {
@@ -51,8 +51,9 @@ function segmentAverage(
   let sum = 0;
   let count = 0;
   for (let i = start; i <= end; i++) {
-    if (typeof arr[i] === "number") {
-      sum += arr[i];
+    const v = arr[i];
+    if (typeof v === "number" && Number.isFinite(v)) {
+      sum += v;
       count++;
     }
   }
@@ -278,11 +279,14 @@ export function buildMergedGpx(
       const tRaw = time[i] ?? i;
       const deltaSec = (tRaw - baseTimeOffset) * scaleFactor;
       const iso = new Date(segStartMs + deltaSec * 1000).toISOString();
-      const eleTag = alt[i] !== undefined ? `<ele>${alt[i]}</ele>` : "";
+      const eleV = alt[i];
+      const hrV = hr[i];
+      const cadV = cad[i];
+      const eleTag = eleV !== undefined ? `<ele>${eleV}</ele>` : "";
       const hrTag =
-        hr[i] !== undefined ? `<gpxtpx:hr>${Math.round(hr[i])}</gpxtpx:hr>` : "";
+        hrV !== undefined ? `<gpxtpx:hr>${Math.round(hrV)}</gpxtpx:hr>` : "";
       const cadTag =
-        cad[i] !== undefined ? `<gpxtpx:cad>${Math.round(cad[i])}</gpxtpx:cad>` : "";
+        cadV !== undefined ? `<gpxtpx:cad>${Math.round(cadV)}</gpxtpx:cad>` : "";
       const ext =
         hrTag || cadTag
           ? `<extensions><gpxtpx:TrackPointExtension>${hrTag}${cadTag}</gpxtpx:TrackPointExtension></extensions>`

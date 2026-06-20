@@ -22,9 +22,9 @@ export async function parseGpxFile(file: File): Promise<ParsedTrack> {
 
   const latlng: Array<[number, number]> = [];
   const time: number[] = [];
-  const altitude: number[] = [];
-  const heartrate: number[] = [];
-  const cadence: number[] = [];
+  const altitude: Array<number | undefined> = [];
+  const heartrate: Array<number | undefined> = [];
+  const cadence: Array<number | undefined> = [];
 
   const firstTimeStr = trkpts[0].getElementsByTagName("time")[0]?.textContent;
   if (!firstTimeStr) {
@@ -48,17 +48,17 @@ export async function parseGpxFile(file: File): Promise<ParsedTrack> {
     time.push(Number.isNaN(ms) ? time.length : Math.round((ms - baseMs) / 1000));
 
     const ele = p.getElementsByTagName("ele")[0]?.textContent;
-    if (ele) altitude.push(parseFloat(ele));
+    altitude.push(ele ? parseFloat(ele) : undefined);
 
     const hr =
       p.getElementsByTagNameNS("*", "hr")[0]?.textContent ??
       p.getElementsByTagName("hr")[0]?.textContent;
-    if (hr) heartrate.push(parseFloat(hr));
+    heartrate.push(hr ? parseFloat(hr) : undefined);
 
     const cad =
       p.getElementsByTagNameNS("*", "cad")[0]?.textContent ??
       p.getElementsByTagName("cad")[0]?.textContent;
-    if (cad) cadence.push(parseFloat(cad));
+    cadence.push(cad ? parseFloat(cad) : undefined);
   }
 
   const trackName =
@@ -71,9 +71,9 @@ export async function parseGpxFile(file: File): Promise<ParsedTrack> {
     streams: {
       latlng: { data: latlng },
       time: { data: time },
-      ...(altitude.length === latlng.length ? { altitude: { data: altitude } } : {}),
-      ...(heartrate.length === latlng.length ? { heartrate: { data: heartrate } } : {}),
-      ...(cadence.length === latlng.length ? { cadence: { data: cadence } } : {}),
+      ...(altitude.some((v) => v !== undefined) ? { altitude: { data: altitude } } : {}),
+      ...(heartrate.some((v) => v !== undefined) ? { heartrate: { data: heartrate } } : {}),
+      ...(cadence.some((v) => v !== undefined) ? { cadence: { data: cadence } } : {}),
     },
     point_count: latlng.length,
   };
@@ -117,18 +117,17 @@ export async function parseFitFile(file: File): Promise<ParsedTrack> {
   const baseMs = +new Date(withGps[0].timestamp as Date | string);
   const latlng: Array<[number, number]> = [];
   const time: number[] = [];
-  const altitude: number[] = [];
-  const heartrate: number[] = [];
-  const cadence: number[] = [];
+  const altitude: Array<number | undefined> = [];
+  const heartrate: Array<number | undefined> = [];
+  const cadence: Array<number | undefined> = [];
 
   for (const r of withGps) {
     latlng.push([r.position_lat as number, r.position_long as number]);
     const ms = +new Date(r.timestamp as Date | string);
     time.push(Math.round((ms - baseMs) / 1000));
-    const alt = r.enhanced_altitude ?? r.altitude;
-    if (alt !== undefined) altitude.push(alt);
-    if (r.heart_rate !== undefined) heartrate.push(r.heart_rate);
-    if (r.cadence !== undefined) cadence.push(r.cadence);
+    altitude.push(r.enhanced_altitude ?? r.altitude);
+    heartrate.push(r.heart_rate);
+    cadence.push(r.cadence);
   }
 
   return {
@@ -137,9 +136,9 @@ export async function parseFitFile(file: File): Promise<ParsedTrack> {
     streams: {
       latlng: { data: latlng },
       time: { data: time },
-      ...(altitude.length === latlng.length ? { altitude: { data: altitude } } : {}),
-      ...(heartrate.length === latlng.length ? { heartrate: { data: heartrate } } : {}),
-      ...(cadence.length === latlng.length ? { cadence: { data: cadence } } : {}),
+      ...(altitude.some((v) => v !== undefined) ? { altitude: { data: altitude } } : {}),
+      ...(heartrate.some((v) => v !== undefined) ? { heartrate: { data: heartrate } } : {}),
+      ...(cadence.some((v) => v !== undefined) ? { cadence: { data: cadence } } : {}),
     },
     point_count: latlng.length,
   };
