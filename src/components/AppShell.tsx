@@ -27,7 +27,7 @@ type TabId = "edit" | "merge" | "analyze";
 const TABS: Array<{ id: TabId; label: string; icon: React.ReactNode }> = [
   { id: "edit", label: "Batch edit", icon: <Edit3 className="h-4 w-4" /> },
   { id: "merge", label: "Merge rides", icon: <GitMerge className="h-4 w-4" /> },
-  { id: "analyze", label: "Analyzer", icon: <Wand2 className="h-4 w-4" /> },
+  { id: "analyze", label: "Inspector", icon: <Wand2 className="h-4 w-4" /> },
 ];
 
 export default function AppShell({

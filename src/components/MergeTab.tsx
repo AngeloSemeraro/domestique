@@ -89,8 +89,8 @@ export default function MergeTab({
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [filesOpen, setFilesOpen] = useState(true);
-  const [ridesOpen, setRidesOpen] = useState(true);
+  const [filesOpen, setFilesOpen] = useState(false);
+  const [ridesOpen, setRidesOpen] = useState(false);
 
   const [files, setFiles] = useState<FileSource[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -1126,10 +1126,10 @@ export default function MergeTab({
                 onClick={sendToAnalyzer}
                 disabled={busy || sources.length < 2}
                 className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] px-4 py-1.5 text-sm font-medium transition-all hover:scale-[1.02] hover:border-strava hover:text-strava disabled:opacity-40"
-                title="Build the merged GPX and load it in the Analyzer tab without uploading"
+                title="Build the merged file and load it in the Inspector tab without uploading"
               >
                 <Wand2 className="h-3.5 w-3.5" />
-                Send to Analyzer
+                Send to Inspector
               </button>
             )}
 

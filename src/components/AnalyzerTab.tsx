@@ -195,7 +195,7 @@ export default function AnalyzerTab({
             <Wand2 className="h-4 w-4" />
           </div>
           <div className="flex-1">
-            <h2 className="font-semibold tracking-tight">GPX / FIT Analyzer</h2>
+            <h2 className="font-semibold tracking-tight">Inspector</h2>
             <p className="text-sm text-[color:var(--fg-muted)]">
               Inspect a track, tune the movement filter live, then download
               the cleaned GPX or publish it straight to Strava.
