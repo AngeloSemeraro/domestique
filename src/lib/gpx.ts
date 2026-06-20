@@ -389,15 +389,18 @@ export function buildMergedGpx(
       cursorMs = sourceEndMs + gapSec * 1000;
     }
 
-    segs += `<trkseg>${pts.join("")}</trkseg>`;
+    // Each source becomes its own <trk> (not just trkseg). Strava treats
+    // multiple <trk> as separate continuous trajectories — distances are
+    // summed within each <trk> only, so a 100 km teleport between source
+    // files cannot inflate the total.
+    const sportHint = a.sport_hint;
+    const trkType = gpxTypeFromSport(sportHint);
+    segs += `<trk><name>${xmlEsc(a.name)}</name><type>${xmlEsc(trkType)}</type><trkseg>${pts.join("")}</trkseg></trk>`;
   }
-
-  const sportHint = sorted.find((a) => a.sport_hint)?.sport_hint;
-  const trkType = gpxTypeFromSport(sportHint);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="Strava Batch Editor" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">
-<metadata><time>${metadataTime}</time></metadata>
-<trk><name>${xmlEsc(trackName)}</name><type>${xmlEsc(trkType)}</type>${segs}</trk>
+<metadata><name>${xmlEsc(trackName)}</name><time>${metadataTime}</time></metadata>
+${segs}
 </gpx>`;
 }
