@@ -394,7 +394,7 @@ export default function AnalyzerTab({
               </div>
             )}
 
-            <div className="mt-4 grid grid-cols-3 gap-3 rounded-lg border border-[color:var(--border)] bg-[color:var(--bg-input)] p-3">
+            <div className="mt-4 grid grid-cols-2 gap-3 rounded-lg border border-[color:var(--border)] bg-[color:var(--bg-input)] p-3 md:grid-cols-4">
               <Stat
                 label="Kept distance"
                 value={`${analysis.keptKm.toFixed(1)} km`}
@@ -408,10 +408,18 @@ export default function AnalyzerTab({
                 good
               />
               <Stat
-                label="Dropped"
+                label="Dropped distance"
                 value={`${(analysis.totalKm - analysis.keptKm).toFixed(1)} km`}
                 sub={`${analysis.runs.length} kept segment(s)`}
                 bad={analysis.totalKm > analysis.keptKm}
+              />
+              <Stat
+                label="Dropped time"
+                value={formatDuration(
+                  Math.max(0, analysis.totalSec - analysis.keptSec)
+                )}
+                sub="pauses, stops, slow bits"
+                bad={analysis.totalSec > analysis.keptSec}
               />
             </div>
           </section>
@@ -619,12 +627,18 @@ function StreamChart({
     const kept = isIndexKept(i, runs);
     samples.push({ x: i, v: series[i] ?? null, kept });
   }
-  const numericVals = samples
-    .map((s) => s.v)
-    .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
-  if (numericVals.length === 0) return null;
-  const min = Math.min(...numericVals);
-  const max = Math.max(...numericVals);
+  // Compute min/max from the full series (not the downsampled one) so the
+  // header label reflects the real range, including spikes the chart
+  // sampling might skip.
+  let min = Infinity;
+  let max = -Infinity;
+  for (const v of series) {
+    if (typeof v === "number" && Number.isFinite(v)) {
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+  }
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
   const range = max - min || 1;
   const xScale = (x: number) => (x / Math.max(1, totalPoints - 1)) * W;
   const yScale = (v: number) => H - ((v - min) / range) * H;
