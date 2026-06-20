@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
 import { Calendar } from "lucide-react";
@@ -33,25 +34,58 @@ export default function DatePickerPopover({
   disabled,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setMounted(true), []);
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const update = () => {
+      const r = triggerRef.current!.getBoundingClientRect();
+      setPos({ top: r.bottom + 4, left: r.left });
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     function onDoc(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
+      const t = e.target as Node;
+      if (
+        triggerRef.current?.contains(t) ||
+        popoverRef.current?.contains(t)
+      ) {
+        return;
       }
+      setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
     }
     document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   const selected = value ? new Date(value + "T00:00:00") : undefined;
   const now = new Date();
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
@@ -61,30 +95,41 @@ export default function DatePickerPopover({
         <Calendar className="h-3.5 w-3.5 text-[color:var(--fg-muted)]" />
       </button>
 
-      {open && (
-        <div
-          className="animate-scale-in absolute left-0 top-full z-50 mt-1 rounded-xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-2 shadow-xl"
-          role="dialog"
-          aria-label={label ?? "Pick a date"}
-        >
-          <DayPicker
-            mode="single"
-            selected={selected}
-            defaultMonth={selected ?? now}
-            onSelect={(d) => {
-              if (d) {
-                onChange(isoDay(d));
-                setOpen(false);
-              }
+      {open &&
+        mounted &&
+        pos &&
+        createPortal(
+          <div
+            ref={popoverRef}
+            style={{
+              position: "fixed",
+              top: pos.top,
+              left: pos.left,
+              zIndex: 9999,
             }}
-            captionLayout="dropdown"
-            startMonth={new Date(2000, 0)}
-            endMonth={new Date(now.getFullYear() + 1, 11)}
-            showOutsideDays
-            className="rdp-strava"
-          />
-        </div>
-      )}
-    </div>
+            className="animate-scale-in rounded-xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-2 shadow-xl"
+            role="dialog"
+            aria-label={label ?? "Pick a date"}
+          >
+            <DayPicker
+              mode="single"
+              selected={selected}
+              defaultMonth={selected ?? now}
+              onSelect={(d) => {
+                if (d) {
+                  onChange(isoDay(d));
+                  setOpen(false);
+                }
+              }}
+              captionLayout="dropdown"
+              startMonth={new Date(2000, 0)}
+              endMonth={new Date(now.getFullYear() + 1, 11)}
+              showOutsideDays
+              className="rdp-strava"
+            />
+          </div>,
+          document.body
+        )}
+    </>
   );
 }
