@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import {
-  Activity,
   Edit3,
   GitMerge,
   LogOut,
   Settings as SettingsIcon,
   Wand2,
 } from "lucide-react";
+import AppLogo from "./AppLogo";
 import type { StravaGear } from "@/lib/strava";
 import type { ParsedTrack } from "@/lib/file-parsers";
 import type { StreamedActivity } from "@/lib/gpx";
@@ -56,9 +56,7 @@ export default function AppShell({
       <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 p-4 md:p-8">
         <header className="animate-fade-in flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-strava text-white shadow-md shadow-strava/30">
-              <Activity className="h-5 w-5" />
-            </div>
+            <AppLogo size={40} />
             <div>
               <h1 className="text-xl font-bold tracking-tight">
                 Strava Batch Editor

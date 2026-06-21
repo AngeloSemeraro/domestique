@@ -1,12 +1,11 @@
-import { Activity, ArrowRight, AlertCircle } from "lucide-react";
+import { ArrowRight, AlertCircle } from "lucide-react";
+import AppLogo from "./AppLogo";
 
 export default function LoginScreen({ error }: { error?: string }) {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
       <div className="animate-scale-in flex flex-col items-center gap-4">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-strava text-white shadow-lg shadow-strava/30">
-          <Activity className="h-8 w-8" />
-        </div>
+        <AppLogo size={72} />
         <h1 className="text-center text-4xl font-bold tracking-tight">
           Strava Batch Editor
         </h1>
