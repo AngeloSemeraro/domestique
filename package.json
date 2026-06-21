@@ -2,6 +2,8 @@
   "name": "strava-batch-editor",
   "version": "0.1.0",
   "private": true,
+  "license": "GPL-3.0-or-later",
+  "description": "Edit, merge and clean up your Strava rides in bulk — self-hosted.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

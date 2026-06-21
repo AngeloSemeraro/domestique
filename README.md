@@ -1,91 +1,128 @@
+<div align="center">
+
+<img src="public/icon.png" width="96" alt="Strava Batch Editor logo" />
+
 # Strava Batch Editor
 
-Webapp to edit many Strava activities at once: sport type, gear (bike),
-indoor (trainer) flag, and feed visibility (`hide_from_home`).
+Edit, merge and clean up your Strava rides in bulk — runs entirely on
+your own machine, talks only to your own Strava account.
 
-Filters: date range, sport type, name search, location (city / state / country).
+**Free software (GPLv3) · self-hosted · no servers, no tracking, no accounts.**
 
-Built with Next.js 15 + TypeScript + Tailwind. Auth via Strava OAuth2,
-session stored in an encrypted httpOnly cookie (`iron-session`).
+</div>
 
 ---
 
-## 1. Create a Strava API application
+## What it does
 
-1. Go to <https://www.strava.com/settings/api>
-2. Click **Create & Manage Your App** and fill in:
-   - **Application Name**: anything (e.g. *Batch Editor*)
-   - **Category**: *Other*
-   - **Club / Website**: any URL (e.g. `http://localhost`)
-   - **Authorization Callback Domain**: `localhost`
-     *(when you deploy on Vercel, change this to your domain, e.g. `your-app.vercel.app` — Strava accepts only one domain, no protocol, no path)*
-   - Upload any icon
-3. After creation, copy **Client ID** and **Client Secret** — you'll need them next.
+Three tools in one local web app:
 
-## 2. Local setup
+### 🖊️ Batch edit
+Select many activities at once and change them in a single pass:
+- **Sport type** (Ride, MountainBikeRide, GravelRide, Run, TrailRun…)
+- **Gear** (assign one of your bikes)
+- **Activity type** (Default / Race / Workout / Long run)
+- **Commute**, **Trainer (indoor)**, **Hide from feed** flags
+- **Rename** inline (pencil next to any activity name, auto-saves to Strava)
+
+Filter the list by date range (quick-range chips: 30d / 90d / 6m / 1y / YTD /
+All), sport, name and location.
+
+### 🔀 Merge rides
+Combine multiple rides into one new activity:
+- Sources can be **Strava activities and/or local `.gpx` / `.fit` files**, in
+  any mix
+- **Movement filter** drops non-cycling stretches (long pauses, a train/car
+  transfer between sessions) using speed + cadence + heart-rate signals, so the
+  merged ride only contains the parts you actually rode
+- **Average-speed control**: keep natural pacing, match a source's average, or
+  hit a custom km/h target
+- **Output**: upload straight to Strava, or download a **TCX** (recommended —
+  carries the real distance odometer so the total is correct) or **GPX**
+
+### 🔍 Inspector
+Drop a single `.gpx` / `.fit` (or send the merge result here) to:
+- see which sensors it has (GPS / HR / cadence / altitude) and their averages
+- tune the movement filter live with kept/dropped charts for speed, HR, cadence
+- download the cleaned file or publish it to Strava
+
+> **Why TCX for uploads?** A GPX file has no distance field, so Strava recomputes
+> distance by summing GPS points — which inflates the total when two source rides
+> are far apart (e.g. you drove between them). TCX carries a per-point
+> `DistanceMeters` odometer that skips those jumps, so Strava shows the real
+> ridden distance. This is the same principle the FIT files other tools upload
+> rely on.
+
+---
+
+## Run it yourself (≈ 5 minutes)
+
+This app is **self-hosted**: it runs on your computer, your Strava credentials
+live only in a local `.env.local` file, and nothing is ever sent to a third
+party. You need [Node.js 18+](https://nodejs.org) and a Strava account.
 
 ```bash
 git clone https://github.com/AngeloSemeraro/strava_batch_editor.git
 cd strava_batch_editor
 npm install
-cp .env.example .env.local
-```
-
-Edit `.env.local`:
-
-```env
-STRAVA_CLIENT_ID=12345
-STRAVA_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-SESSION_SECRET=<paste output of: openssl rand -base64 32>
-```
-
-Run:
-
-```bash
 npm run dev
 ```
 
-Open <http://localhost:3000> and click **Connect with Strava**.
+Open <http://localhost:3000>. On first run a **setup wizard** walks you through:
 
-## 3. Deploy on Vercel (when you're ready)
+1. Creating a free Strava API application (it opens the portal and tells you
+   exactly what to fill in — Authorization Callback Domain = `localhost`)
+2. Pasting the **Client ID** and **Client Secret** back into the wizard
+3. It generates a random session secret and writes everything to `.env.local`
+   for you
 
-1. Push the repo to GitHub.
-2. On <https://vercel.com> → **Add New… → Project** → import the repo.
-3. In **Settings → Environment Variables** add:
-   - `STRAVA_CLIENT_ID`
-   - `STRAVA_CLIENT_SECRET`
-   - `SESSION_SECRET` (a fresh 32+ char random string)
-   - `NEXT_PUBLIC_APP_URL` = `https://<your-project>.vercel.app`
-4. Deploy.
-5. On Strava (<https://www.strava.com/settings/api>), set **Authorization Callback Domain** to `<your-project>.vercel.app` (no protocol).
-6. Open the Vercel URL and log in.
+Restart the dev server (`Ctrl+C`, then `npm run dev`), reload, and click
+**Connect with Strava**.
 
-## How it works
+### Manual setup (optional)
 
-- **OAuth**: `/api/auth/login` redirects to Strava, `/api/auth/callback` exchanges
-  the code for access/refresh tokens, stored in an encrypted cookie.
-- **List**: `/api/activities` proxies `GET /athlete/activities` with `after`/`before`
-  timestamps. The client pulls up to 5 pages (500 activities) per reload.
-- **Batch update**: `/api/activities/batch` accepts `{ ids, update }`, then calls
-  `PUT /activities/{id}` for each, with a 250 ms delay between calls and an
-  immediate stop on HTTP 429. The client splits the queue in chunks of 5 and
-  shows live progress.
+If you'd rather skip the wizard, copy `.env.example` to `.env.local` and fill:
+
+```env
+STRAVA_CLIENT_ID=12345
+STRAVA_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+SESSION_SECRET=<openssl rand -base64 32>
+```
+
+Get the Client ID/Secret at <https://www.strava.com/settings/api>
+(Authorization Callback Domain: `localhost`).
+
+---
 
 ## Strava rate limits
 
-- 100 requests / 15 min, 1 000 / day per athlete.
-- Each activity edit = 1 request. The page refresh of 500 activities = ~5
-  requests (paged listing). Bulk-editing 100 activities in a sitting is fine.
-- If you hit 429, wait 15 minutes and retry — the UI shows per-activity errors.
+Strava allows 200 requests / 15 min and 2,000 / day per application. Because
+every user runs **their own** app, you get the full quota to yourself. Bulk
+edits are throttled (250 ms between writes) and stop cleanly if you hit a limit.
 
-## Editable fields
+---
 
-- `sport_type` — e.g. `Ride`, `MountainBikeRide`, `GravelRide`, `Run`, `TrailRun`…
-- `gear_id` — only **bikes** are listed in the dropdown (your registered bikes
-  come from `GET /athlete`).
-- `hide_from_home` — true/false, hides the activity from your followers' feed.
-- `trainer` — true/false, marks as indoor/trainer.
+## A note on deleting / merging
 
-(Other fields like `name`, `description`, `commute` are easy to add — they all
-go through the same `PUT /activities/{id}`.)
+Strava's public API has **no delete endpoint** and **no native merge**. So:
+- The Merge tool creates a *new* activity; the originals stay on your profile.
+  Hide them via the Batch edit tab or delete them by hand on strava.com.
+- Uploading a merge whose source rides are still on Strava will be rejected as
+  a duplicate — delete the sources first, or use the download option.
+
+---
+
+## Tech
+
+Next.js (App Router) · React · TypeScript · Tailwind CSS · Geist · lucide-react ·
+react-day-picker · iron-session · fit-file-parser · OpenStreetMap/Nominatim
+(reverse geocoding). See [CONTRIBUTING.md](CONTRIBUTING.md) for the project
+layout and how to help.
+
+## License
+
+[GPLv3](LICENSE) — free software. Use it, share it, improve it. Provided as is,
+with no warranty; use at your own risk. Not affiliated with Strava, Inc.
+
+If it saves you time, share it with a friend who rides. 🚴
