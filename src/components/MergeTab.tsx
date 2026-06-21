@@ -23,6 +23,7 @@ import {
   buildMergedGpx,
   buildMergedTcx,
   combineSourcesForDisplay,
+  randomDuplicateShiftSec,
   DEFAULT_MOVEMENT_FILTER,
   filteredStats,
   streamAvgKmh,
@@ -103,6 +104,7 @@ export default function MergeTab({
   const [customKmh, setCustomKmh] = useState<string>("25");
   const [movement, setMovement] = useState<MovementFilter>(DEFAULT_MOVEMENT_FILTER);
   const [showMovementOpts, setShowMovementOpts] = useState(false);
+  const [bypassDuplicate, setBypassDuplicate] = useState(false);
   const [step, setStep] = useState<Step>({ kind: "idle" });
 
   async function load() {
@@ -299,9 +301,10 @@ export default function MergeTab({
         };
       });
       const timingOpts: TimingOptions = resolveTiming(timing, sources, customKmh);
+      const shiftSec = bypassDuplicate ? randomDuplicateShiftSec() : 0;
 
       if (output === "gpx") {
-        const gpx = buildMergedGpx(orderedForGpx, name, timingOpts, movement);
+        const gpx = buildMergedGpx(orderedForGpx, name, timingOpts, movement, shiftSec);
         const filename = `${slug(name)}-${isoDay(new Date())}.gpx`;
         triggerDownload(gpx, filename, "application/gpx+xml");
         setStep({ kind: "done_download", filename });
@@ -311,7 +314,7 @@ export default function MergeTab({
       // TCX carries an explicit per-point DistanceMeters odometer that skips
       // teleports, so Strava uses the real ridden distance instead of summing
       // GPS points across unrecorded transfers.
-      const tcx = buildMergedTcx(orderedForGpx, name, timingOpts, movement);
+      const tcx = buildMergedTcx(orderedForGpx, name, timingOpts, movement, shiftSec);
 
       if (output === "tcx") {
         const filename = `${slug(name)}-${isoDay(new Date())}.tcx`;
@@ -864,6 +867,23 @@ export default function MergeTab({
                   </ul>
                 </div>
               )}
+            {output !== "gpx" && (
+              <label className="mt-3 flex items-start gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={bypassDuplicate}
+                  onChange={(e) => setBypassDuplicate(e.target.checked)}
+                  className="mt-0.5 accent-strava"
+                />
+                <span>
+                  <span className="font-medium">Bypass duplicate detection</span>{" "}
+                  — shift the start time back by a random 2–15 min so Strava
+                  accepts the upload even if the source rides are still on your
+                  account. May take a couple of tries; the shift is small so the
+                  date stays correct.
+                </span>
+              </label>
+            )}
           </fieldset>
 
           <fieldset className="mt-4 rounded-lg border border-[color:var(--border)] bg-[color:var(--bg-input)] p-3">

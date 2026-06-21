@@ -463,19 +463,23 @@ export function buildMergedGpx(
   activities: StreamedActivity[],
   trackName: string,
   timing: TimingOptions = { mode: "natural" },
-  movement: MovementFilter = NO_FILTER
+  movement: MovementFilter = NO_FILTER,
+  /** Shift all timestamps back by this many seconds so Strava doesn't flag
+   *  the upload as a duplicate of the still-present source rides. */
+  idShiftSec = 0
 ): string {
   const groups = planMergedGroups(activities, timing, movement);
+  const shiftMs = idShiftSec * 1000;
   const metadataTime =
     groups[0]?.points[0] !== undefined
-      ? new Date(groups[0].points[0].ms).toISOString()
+      ? new Date(groups[0].points[0].ms - shiftMs).toISOString()
       : new Date().toISOString();
 
   let segs = "";
   for (const group of groups) {
     const pts = group.points
       .map((p) => {
-        const iso = new Date(p.ms).toISOString();
+        const iso = new Date(p.ms - shiftMs).toISOString();
         const eleTag = p.ele !== undefined ? `<ele>${p.ele}</ele>` : "";
         const hrTag =
           p.hr !== undefined ? `<gpxtpx:hr>${Math.round(p.hr)}</gpxtpx:hr>` : "";
@@ -503,6 +507,13 @@ ${segs}
 </gpx>`;
 }
 
+/** Random whole-second shift between 2 and 15 minutes, for duplicate bypass. */
+export function randomDuplicateShiftSec(): number {
+  const minM = 2;
+  const maxM = 15;
+  return Math.round((minM + Math.random() * (maxM - minM)) * 60);
+}
+
 function tcxSport(sport: string | undefined): string {
   const t = gpxTypeFromSport(sport);
   if (t === "Running") return "Running";
@@ -521,12 +532,17 @@ export function buildMergedTcx(
   activities: StreamedActivity[],
   trackName: string,
   timing: TimingOptions = { mode: "natural" },
-  movement: MovementFilter = NO_FILTER
+  movement: MovementFilter = NO_FILTER,
+  /** Shift all timestamps back by this many seconds. Strava dedups TCX by
+   *  the <Id> start time, so a few minutes' shift makes a re-upload look
+   *  like a distinct activity. */
+  idShiftSec = 0
 ): string {
   const groups = planMergedGroups(activities, timing, movement);
+  const shiftMs = idShiftSec * 1000;
   const firstPt = groups[0]?.points[0];
   const activityId = firstPt
-    ? new Date(firstPt.ms).toISOString()
+    ? new Date(firstPt.ms - shiftMs).toISOString()
     : new Date().toISOString();
   const sport = tcxSport(activities.find((a) => a.sport_hint)?.sport_hint);
 
@@ -534,7 +550,7 @@ export function buildMergedTcx(
   for (const group of groups) {
     const pts = group.points;
     if (pts.length === 0) continue;
-    const lapStartIso = new Date(pts[0].ms).toISOString();
+    const lapStartIso = new Date(pts[0].ms - shiftMs).toISOString();
     const lapStartDist = pts[0].distM;
     const lapEndDist = pts[pts.length - 1].distM;
     const lapDistM = Math.max(0, lapEndDist - lapStartDist);
@@ -542,7 +558,7 @@ export function buildMergedTcx(
 
     const trkpts = pts
       .map((p) => {
-        const iso = new Date(p.ms).toISOString();
+        const iso = new Date(p.ms - shiftMs).toISOString();
         const pos = `<Position><LatitudeDegrees>${p.lat}</LatitudeDegrees><LongitudeDegrees>${p.lng}</LongitudeDegrees></Position>`;
         const ele = p.ele !== undefined ? `<AltitudeMeters>${p.ele}</AltitudeMeters>` : "";
         const dist = `<DistanceMeters>${p.distM.toFixed(2)}</DistanceMeters>`;

@@ -19,6 +19,7 @@ import {
 import {
   buildMergedGpx,
   buildMergedTcx,
+  randomDuplicateShiftSec,
   DEFAULT_MOVEMENT_FILTER,
   filteredStats,
   movingRuns,
@@ -54,6 +55,7 @@ export default function AnalyzerTab({
   const [movement, setMovement] = useState<MovementFilter>(DEFAULT_MOVEMENT_FILTER);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [bypassDuplicate, setBypassDuplicate] = useState(false);
   const [step, setStep] = useState<Step>({ kind: "idle" });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -137,15 +139,17 @@ export default function AnalyzerTab({
               },
             ];
 
+      const shiftSec = bypassDuplicate ? randomDuplicateShiftSec() : 0;
+
       if (target === "gpx") {
-        const gpx = buildMergedGpx(sourcesForBuild, name, { mode: "natural" }, movement);
+        const gpx = buildMergedGpx(sourcesForBuild, name, { mode: "natural" }, movement, shiftSec);
         const filename = `${slug(name)}.gpx`;
         triggerDownload(gpx, filename, "application/gpx+xml");
         setStep({ kind: "done_download", filename });
         return;
       }
 
-      const tcx = buildMergedTcx(sourcesForBuild, name, { mode: "natural" }, movement);
+      const tcx = buildMergedTcx(sourcesForBuild, name, { mode: "natural" }, movement, shiftSec);
       if (target === "tcx") {
         const filename = `${slug(name)}.tcx`;
         triggerDownload(tcx, filename, "application/vnd.garmin.tcx+xml");
@@ -549,6 +553,21 @@ export default function AnalyzerTab({
                 />
               </label>
             </div>
+
+            <label className="mt-3 flex items-start gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={bypassDuplicate}
+                onChange={(e) => setBypassDuplicate(e.target.checked)}
+                className="mt-0.5 accent-strava"
+              />
+              <span>
+                <span className="font-medium">Bypass duplicate detection</span>{" "}
+                — shift the start time back by a random 2–15 min so Strava
+                accepts the upload even if the original ride is still on your
+                account. May take a couple of tries.
+              </span>
+            </label>
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <button
