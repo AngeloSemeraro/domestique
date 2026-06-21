@@ -26,11 +26,28 @@ wordpress-plugin/
 | 1 | PHP scaffold: plugin file, admin page, OAuth, REST proxy, shortcodes (placeholder mount) | ✅ |
 | 2 | Strava OAuth flow live + token refresh | ✅ (in phase 1) |
 | 3 | Strava REST proxy (activities / streams / uploads / geocode) | ✅ (in phase 1) |
-| 4 | React bundle build (Vite) wired to WP REST endpoints | ⏳ |
+| 4 | React bundle build (Vite) wired to WP REST endpoints | ✅ |
 | 5 | i18n .pot, screenshots, WP.org submission package | ⏳ |
 
 Phases 2 and 3 landed inside the same scaffold pass because the PHP side is
-small enough that splitting it added no value. Phase 4 is the substantial one.
+small enough that splitting it added no value.
+
+## Building the React bundle
+
+The bundle reuses the same React components and `src/lib/*` as the Next.js
+app — only the API base URL and auth header differ (handled by
+`src/lib/api.ts`, which detects `window.SBE_BOOTSTRAP`).
+
+```bash
+cd wordpress-plugin
+npm install
+npm run build       # writes strava-batch-editor/assets/js/app.iife.js
+                    # and strava-batch-editor/assets/css/app.css
+```
+
+`npm run dev` watches for changes during development. The plugin enqueues
+both files only on pages that actually contain a shortcode, so they don't
+load on the rest of the site.
 
 ## Install (developer mode)
 

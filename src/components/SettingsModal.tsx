@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiFetch, loginHref } from "@/lib/api";
 import {
   AlertTriangle,
   KeyRound,
@@ -36,8 +37,8 @@ export default function SettingsModal({
     )
       return;
     setBusy("reauth");
-    await fetch("/api/auth/logout", { method: "POST" });
-    location.href = "/api/auth/login";
+    await apiFetch("/api/auth/logout", { method: "POST" });
+    location.href = loginHref();
   }
 
   async function revoke() {
@@ -49,7 +50,7 @@ export default function SettingsModal({
       return;
     setBusy("revoke");
     try {
-      const res = await fetch("/api/auth/revoke", { method: "POST" });
+      const res = await apiFetch("/api/auth/revoke", { method: "POST" });
       const data = await res.json();
       if (!data.revoked) {
         setMessage(

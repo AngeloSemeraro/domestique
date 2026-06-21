@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { apiFetch } from "@/lib/api";
 import {
   Edit3,
   GitMerge,
@@ -42,7 +43,7 @@ export default function AppShell({
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await apiFetch("/api/auth/logout", { method: "POST" });
     location.href = "/";
   }
 

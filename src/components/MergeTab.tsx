@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { apiFetch } from "@/lib/api";
 import {
   AlertCircle,
   Bike,
@@ -125,7 +126,7 @@ export default function MergeTab({
           before: String(beforeTs),
           page: String(page),
         });
-        const res = await fetch(`/api/activities?${qs.toString()}`);
+        const res = await apiFetch(`/api/activities?${qs.toString()}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (!data.activities?.length) break;
@@ -263,7 +264,7 @@ export default function MergeTab({
       const streamsById = new Map<number, Streams>();
       for (let i = 0; i < stravaSources.length; i++) {
         const a = stravaSources[i].activity;
-        const res = await fetch(`/api/streams/${a.id}`);
+        const res = await apiFetch(`/api/streams/${a.id}`);
         if (!res.ok) {
           const e = await res.json().catch(() => ({}));
           throw new Error(`Streams for ${a.name}: ${e.error ?? res.status}`);
@@ -324,7 +325,7 @@ export default function MergeTab({
       }
 
       setStep({ kind: "uploading" });
-      const up = await fetch("/api/uploads", {
+      const up = await apiFetch("/api/uploads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -366,7 +367,7 @@ export default function MergeTab({
       const streamsById = new Map<number, Streams>();
       for (let i = 0; i < stravaSources.length; i++) {
         const a = stravaSources[i].activity;
-        const res = await fetch(`/api/streams/${a.id}`);
+        const res = await apiFetch(`/api/streams/${a.id}`);
         if (!res.ok) {
           const e = await res.json().catch(() => ({}));
           throw new Error(`Streams for ${a.name}: ${e.error ?? res.status}`);
@@ -1328,7 +1329,7 @@ async function pollUpload(id: number): Promise<number> {
   const TIMEOUT_MS = 120_000;
   while (Date.now() - start < TIMEOUT_MS) {
     await new Promise((r) => setTimeout(r, 2000));
-    const res = await fetch(`/api/uploads/${id}`);
+    const res = await apiFetch(`/api/uploads/${id}`);
     const data = await res.json().catch(() => ({}));
     if (data.error) {
       const msg = String(data.error);

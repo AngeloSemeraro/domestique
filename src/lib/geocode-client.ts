@@ -1,3 +1,4 @@
+import { apiFetch } from "./api";
 export type GeoLocation = {
   city: string | null;
   state: string | null;
@@ -71,7 +72,7 @@ export function geocodeQueue(
       if (aborted) return;
       const k = coordKey(it.lat, it.lng);
       try {
-        const res = await fetch(`/api/geocode?lat=${it.lat}&lng=${it.lng}`);
+        const res = await apiFetch(`/api/geocode?lat=${it.lat}&lng=${it.lng}`);
         if (res.ok) {
           const geo = (await res.json()) as GeoLocation;
           cache[k] = geo;

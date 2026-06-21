@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { apiFetch } from "@/lib/api";
 import {
   AlertCircle,
   Check,
@@ -158,7 +159,7 @@ export default function AnalyzerTab({
       }
 
       setStep({ kind: "uploading" });
-      const up = await fetch("/api/uploads", {
+      const up = await apiFetch("/api/uploads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -912,7 +913,7 @@ async function pollUpload(id: number): Promise<number> {
   const TIMEOUT_MS = 120_000;
   while (Date.now() - start < TIMEOUT_MS) {
     await new Promise((r) => setTimeout(r, 2000));
-    const res = await fetch(`/api/uploads/${id}`);
+    const res = await apiFetch(`/api/uploads/${id}`);
     const data = await res.json().catch(() => ({}));
     if (data.error) {
       const msg = String(data.error);

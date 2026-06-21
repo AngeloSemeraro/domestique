@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Scope variables/typography to the plugin mount so we don't fight the
+ * surrounding WordPress theme. Color tokens mirror the Next.js app. */
+.sbe-mount {
+  --bg: #ffffff;
+  --bg-elev: #fafafa;
+  --bg-input: #ffffff;
+  --fg: #0a0a0a;
+  --fg-muted: #6b7280;
+  --border: #e5e7eb;
+  --row-hover: #f5f5f5;
+  --row-selected: rgba(252, 76, 2, 0.08);
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  border-radius: 0.75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .sbe-mount {
+    --bg: #0a0a0b;
+    --bg-elev: #131316;
+    --bg-input: #0f0f12;
+    --fg: #f5f5f5;
+    --fg-muted: #9ca3af;
+    --border: #27272a;
+    --row-hover: #1a1a1d;
+    --row-selected: rgba(252, 76, 2, 0.12);
+  }
+}
+
+/* react-day-picker palette parity with the Next.js build */
+.sbe-mount .rdp-strava {
+  --rdp-accent-color: #fc4c02;
+  --rdp-accent-background-color: rgba(252, 76, 2, 0.12);
+  --rdp-day-height: 2rem;
+  --rdp-day-width: 2rem;
+  font-size: 0.875rem;
+  margin: 0;
+}

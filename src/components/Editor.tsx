@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { apiFetch } from "@/lib/api";
 import {
   Activity,
   Bike,
@@ -153,7 +154,7 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
         if (afterTs) qs.set("after", String(afterTs));
         if (beforeTs) qs.set("before", String(beforeTs));
         qs.set("page", String(page));
-        const res = await fetch(`/api/activities?${qs.toString()}`);
+        const res = await apiFetch(`/api/activities?${qs.toString()}`);
         if (!res.ok) {
           const e = await res.json().catch(() => ({}));
           throw new Error(e.error ?? `HTTP ${res.status}`);
@@ -255,7 +256,7 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
     const errors: BatchProgress["errors"] = [];
     for (let i = 0; i < queue.length; i += CHUNK) {
       const slice = queue.slice(i, i + CHUNK);
-      const res = await fetch("/api/activities/batch", {
+      const res = await apiFetch("/api/activities/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ updates: slice }),
@@ -884,7 +885,7 @@ function NameCell({
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/activities/batch", {
+      const res = await apiFetch("/api/activities/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
