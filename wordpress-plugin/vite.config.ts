@@ -14,11 +14,27 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   // Resolve the same @/* alias the Next.js app uses, pointing back at
-  // ../src so we share lib/* and components/* verbatim.
+  // ../src so we share lib/* and components/* verbatim. The explicit
+  // react/react-dom aliases (plus `dedupe`) make sure every import of
+  // React anywhere in the bundle resolves to the SAME copy under this
+  // plugin's node_modules — without that, components imported from
+  // ../src/* end up bundling the Next.js project's react too, which
+  // causes "null is not an object (evaluating useContext)" hook errors.
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "../src"),
+      react: path.resolve(__dirname, "node_modules/react"),
+      "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
+      "react/jsx-runtime": path.resolve(
+        __dirname,
+        "node_modules/react/jsx-runtime.js"
+      ),
+      "react/jsx-dev-runtime": path.resolve(
+        __dirname,
+        "node_modules/react/jsx-dev-runtime.js"
+      ),
     },
+    dedupe: ["react", "react-dom"],
   },
   // Next.js statically replaces process.env.NODE_ENV; Vite in lib mode
   // doesn't, and React (plus a few dev-mode shims) reference it at module
