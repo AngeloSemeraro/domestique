@@ -53,8 +53,17 @@ final class SBE_Shortcode {
 		$tab = sanitize_key( (string) $atts['tab'] );
 		$id  = 'sbe-root-' . wp_generate_password( 8, false );
 
+		$bundle_missing = ! file_exists( SBE_PLUGIN_DIR . 'assets/js/app.iife.js' );
+
+		if ( $bundle_missing && current_user_can( 'manage_options' ) ) {
+			return $this->bundle_missing_notice();
+		}
+		if ( $bundle_missing ) {
+			return $this->bundle_missing_user_notice();
+		}
+
 		return sprintf(
-			'<div class="sbe-mount" id="%s" data-sbe-mount="1" data-sbe-tab="%s"></div>',
+			'<div class="sbe-mount" id="%s" data-sbe-mount="1" data-sbe-tab="%s"><div style="padding:1rem;color:#888;font:14px/1.4 system-ui">' . esc_html__( 'Loading Strava Batch Editor…', 'strava-batch-editor' ) . '</div></div>',
 			esc_attr( $id ),
 			esc_attr( in_array( $tab, array( 'edit', 'merge', 'inspector', 'all' ), true ) ? $tab : 'all' )
 		);
@@ -124,6 +133,28 @@ final class SBE_Shortcode {
 			'sbe-app',
 			'window.SBE_BOOTSTRAP = ' . wp_json_encode( $bootstrap ) . ';',
 			'before'
+		);
+	}
+
+	private function bundle_missing_notice(): string {
+		return sprintf(
+			'<div class="sbe-notice" style="padding:1rem;border:1px solid #d63638;border-radius:.5rem;background:#fcf0f1;color:#000;font-family:system-ui;font-size:13px;line-height:1.5;">
+				<strong>%1$s</strong><br>%2$s
+				<pre style="background:#fff;border:1px solid #ddd;padding:.6rem;margin:.6rem 0 0;overflow:auto;font-size:12px;border-radius:.3rem;">cd wordpress-plugin
+npm install
+npm run build</pre>
+				%3$s
+			</div>',
+			esc_html__( 'Strava Batch Editor: React bundle not built yet.', 'strava-batch-editor' ),
+			esc_html__( 'The plugin folder is missing assets/js/app.iife.js. Build the bundle from the project sources:', 'strava-batch-editor' ),
+			esc_html__( 'Then copy assets/js/app.iife.js and assets/css/app.css into this plugin folder. (Visible to admins only.)', 'strava-batch-editor' )
+		);
+	}
+
+	private function bundle_missing_user_notice(): string {
+		return sprintf(
+			'<div class="sbe-notice" style="padding:1rem;border:1px solid #ddd;border-radius:.5rem;background:#f6f7f7;">%s</div>',
+			esc_html__( 'Strava Batch Editor is being set up. Please check back in a moment.', 'strava-batch-editor' )
 		);
 	}
 
