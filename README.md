@@ -103,6 +103,52 @@ edits are throttled (250 ms between writes) and stop cleanly if you hit a limit.
 
 ---
 
+## Also available: WordPress plugin
+
+The same three tools (Batch edit, Merge rides, Inspector) ship as a
+**self-contained WordPress plugin** — drop a shortcode on any page and the
+app renders right there. Useful if you already host a WordPress site and
+don't want to run Node locally.
+
+| | Next.js (this repo) | WordPress plugin |
+|---|---|---|
+| Where it runs | Your computer (`npm run dev`) | Your WordPress site |
+| Login | Browser cookie session | Standard WordPress login |
+| Multi-user | Single user per install | Each WP user connects their own Strava |
+| Access | `localhost:3000` | Any page with `[strava_batch_editor]` |
+
+**Shortcodes** the plugin exposes:
+
+```
+[strava_batch_editor]                     full app, all three tabs
+[strava_batch_editor tab="edit"]          Batch edit only
+[strava_batch_editor tab="merge"]         Merge rides only
+[strava_batch_editor tab="inspector"]     Inspector only
+[strava_batch_editor_login]               just the Connect with Strava button
+```
+
+**Get it:**
+
+- Pre-built installable ZIPs land on the [Releases page](https://github.com/AngeloSemeraro/strava_batch_editor/releases)
+- Or build from source — the plugin lives under [`wordpress-plugin/`](wordpress-plugin/):
+
+  ```bash
+  git clone https://github.com/AngeloSemeraro/strava_batch_editor.git
+  cd strava_batch_editor/wordpress-plugin
+  npm install && npm run build
+  zip -r strava-batch-editor.zip strava-batch-editor -x "*.DS_Store"
+  ```
+
+  Then in WordPress: **Plugins → Add New → Upload Plugin** → pick the zip →
+  **Activate** → **Settings → Strava Batch Editor** to paste your Strava API
+  credentials. See [`wordpress-plugin/README.md`](wordpress-plugin/README.md)
+  for the full architecture (PHP backend, REST endpoints, OAuth flow).
+
+Same GPLv3 license, same TCX-with-distance logic, same per-user token
+storage. Pick the build that fits your hosting story.
+
+---
+
 ## A note on deleting / merging
 
 Strava's public API has **no delete endpoint** and **no native merge**. So:
