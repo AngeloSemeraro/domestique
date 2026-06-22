@@ -62,6 +62,21 @@ type Update = {
   workout_kind?: WorkoutKind;
 };
 
+type AthleteStats = {
+  all_ride_totals?: {
+    count: number;
+    distance: number; // metres
+    moving_time: number; // seconds
+    elevation_gain: number; // metres
+  };
+  ytd_ride_totals?: {
+    count: number;
+    distance: number;
+    moving_time: number;
+    elevation_gain: number;
+  };
+};
+
 type BatchProgress = {
   total: number;
   done: number;
@@ -105,6 +120,7 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
 
   const [geo, setGeo] = useState<Record<number, GeoLocation>>({});
   const [geoProgress, setGeoProgress] = useState<{ done: number; total: number } | null>(null);
+  const [stats, setStats] = useState<AthleteStats | null>(null);
   const geoAbortRef = useRef<(() => void) | null>(null);
 
   function applyPreset(p: (typeof PRESETS)[number]) {
@@ -286,6 +302,10 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
 
   useEffect(() => {
     loadActivities();
+    apiFetch("/api/stats")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setStats(d as AthleteStats))
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -626,6 +646,45 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
           </details>
         )}
       </Card>
+
+      {stats?.all_ride_totals && (
+        <Card>
+          <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-[color:var(--fg-muted)]">
+                All-time
+              </p>
+              <p className="text-3xl font-bold tracking-tight text-strava">
+                {Math.round(stats.all_ride_totals.distance / 1000).toLocaleString()}
+                <span className="ml-1 text-base font-medium text-[color:var(--fg-muted)]">
+                  km
+                </span>
+              </p>
+              <p className="text-xs text-[color:var(--fg-muted)]">
+                {stats.all_ride_totals.count.toLocaleString()} rides ·{" "}
+                {Math.round(stats.all_ride_totals.elevation_gain).toLocaleString()} m climbed
+              </p>
+            </div>
+            {stats.ytd_ride_totals && stats.ytd_ride_totals.count > 0 && (
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-[color:var(--fg-muted)]">
+                  This year
+                </p>
+                <p className="text-2xl font-semibold tracking-tight">
+                  {Math.round(stats.ytd_ride_totals.distance / 1000).toLocaleString()}
+                  <span className="ml-1 text-sm font-medium text-[color:var(--fg-muted)]">
+                    km
+                  </span>
+                </p>
+                <p className="text-xs text-[color:var(--fg-muted)]">
+                  {stats.ytd_ride_totals.count.toLocaleString()} rides ·{" "}
+                  {Math.round(stats.ytd_ride_totals.elevation_gain).toLocaleString()} m
+                </p>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
 
       <Card padding={false}>
         <div className="overflow-x-auto">

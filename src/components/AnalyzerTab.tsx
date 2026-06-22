@@ -521,12 +521,18 @@ export default function AnalyzerTab({
                   totalPoints={file.point_count}
                 />
               )}
+              {analysis.hasAlt && (
+                <ElevationChart
+                  streams={file.streams}
+                  totalPoints={file.point_count}
+                />
+              )}
             </div>
             <p className="mt-2 text-xs text-[color:var(--fg-muted)]">
               <span className="inline-block h-2 w-3 rounded bg-strava align-middle"></span>{" "}
               kept ·{" "}
               <span className="inline-block h-2 w-3 rounded bg-[color:var(--fg-muted)]/30 align-middle"></span>{" "}
-              dropped
+              dropped · elevation profile colored by gradient
             </p>
           </section>
 
@@ -687,6 +693,196 @@ function Stat({
       <p className="text-xs text-[color:var(--fg-muted)]">{sub}</p>
     </div>
   );
+}
+
+/**
+ * Filled elevation profile colored by gradient (climb / flat / descent).
+ * Each x-step gets its own colored vertical rect under the line so the
+ * eye reads the steepness directly off the chart.
+ */
+function ElevationChart({
+  streams,
+  totalPoints,
+}: {
+  streams: Streams;
+  totalPoints: number;
+}) {
+  const ll = streams.latlng?.data ?? [];
+  const alt = streams.altitude?.data ?? [];
+  if (alt.length === 0 || ll.length === 0) return null;
+
+  // Min/max from the full series for honest axis labels.
+  let aMin = Infinity;
+  let aMax = -Infinity;
+  for (const v of alt) {
+    if (typeof v === "number" && Number.isFinite(v)) {
+      if (v < aMin) aMin = v;
+      if (v > aMax) aMax = v;
+    }
+  }
+  if (!Number.isFinite(aMin) || !Number.isFinite(aMax)) return null;
+  const range = aMax - aMin || 1;
+
+  // Cumulative elevation gain / loss (full data).
+  let gain = 0;
+  let loss = 0;
+  for (let i = 1; i < alt.length; i++) {
+    const a = alt[i];
+    const b = alt[i - 1];
+    if (typeof a === "number" && typeof b === "number") {
+      const d = a - b;
+      if (d > 0) gain += d;
+      else loss -= d;
+    }
+  }
+
+  // Downsample for rendering.
+  const W = 1000;
+  const H = 100;
+  const target = 400;
+  const step = Math.max(1, Math.ceil(alt.length / target));
+
+  type Sample = { x: number; y: number; gradPct: number };
+  const samples: Sample[] = [];
+  for (let i = 0; i < alt.length; i += step) {
+    const v = alt[i];
+    if (typeof v !== "number" || !Number.isFinite(v)) continue;
+    const prevIdx = Math.max(0, i - step);
+    const prev = alt[prevIdx];
+    const dEle =
+      typeof prev === "number" && Number.isFinite(prev) ? v - prev : 0;
+    const dDist =
+      i > 0 && ll[i] && ll[prevIdx]
+        ? haversineKm(ll[prevIdx], ll[i]) * 1000
+        : 0;
+    const gradPct = dDist > 0 ? (dEle / dDist) * 100 : 0;
+    samples.push({ x: i, y: v, gradPct });
+  }
+  if (samples.length === 0) return null;
+
+  const xScale = (x: number) => (x / Math.max(1, totalPoints - 1)) * W;
+  const yScale = (y: number) => H - ((y - aMin) / range) * (H - 8) - 4;
+  const barWidth = W / Math.max(1, samples.length);
+
+  function gradColor(pct: number): string {
+    // Clamp to ±12%; map to a green→neutral→red ramp.
+    const x = Math.max(-12, Math.min(12, pct));
+    if (x >= 0) {
+      const t = Math.min(1, x / 8); // 0 flat → 1 at ~8%
+      // light green-grey (#cbd5e1) → red-orange (#ef4444)
+      return mix("#cbd5e1", "#ef4444", t);
+    }
+    const t = Math.min(1, -x / 8);
+    return mix("#cbd5e1", "#10b981", t);
+  }
+
+  // Build line path.
+  const linePath = samples
+    .map((s, i) => `${i === 0 ? "M" : "L"} ${xScale(s.x).toFixed(1)} ${yScale(s.y).toFixed(1)}`)
+    .join(" ");
+
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-xs">
+        <span
+          className="inline-flex items-center gap-1.5 font-medium"
+          style={{ color: "#0ea5e9" }}
+        >
+          <MountainIcon />
+          Elevation
+        </span>
+        <span className="font-mono text-[color:var(--fg-muted)]">
+          {Math.round(aMin)} – {Math.round(aMax)} m · ↑{Math.round(gain)} ↓
+          {Math.round(loss)} m
+        </span>
+      </div>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        className="block h-20 w-full rounded bg-[color:var(--bg-input)]"
+      >
+        {/* gradient-colored bars under the profile */}
+        {samples.map((s, i) => (
+          <rect
+            key={i}
+            x={xScale(s.x)}
+            y={yScale(s.y)}
+            width={barWidth + 0.5}
+            height={H - yScale(s.y)}
+            fill={gradColor(s.gradPct)}
+            opacity={0.85}
+          />
+        ))}
+        {/* outline line on top */}
+        <path
+          d={linePath}
+          fill="none"
+          stroke="#0ea5e9"
+          strokeWidth={1.2}
+          strokeOpacity={0.9}
+        />
+      </svg>
+      <div className="mt-1 flex items-center gap-2 text-[10px] text-[color:var(--fg-muted)]">
+        <span className="inline-flex items-center gap-1">
+          <span
+            className="inline-block h-2 w-3 rounded"
+            style={{ background: "#10b981" }}
+          ></span>
+          descent
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span
+            className="inline-block h-2 w-3 rounded"
+            style={{ background: "#cbd5e1" }}
+          ></span>
+          flat
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span
+            className="inline-block h-2 w-3 rounded"
+            style={{ background: "#ef4444" }}
+          ></span>
+          climb
+        </span>
+        <span className="ml-auto opacity-70">color intensity ∝ gradient %</span>
+      </div>
+    </div>
+  );
+}
+
+function MountainIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m8 3 4 8 5-5 5 15H2L8 3z" />
+    </svg>
+  );
+}
+
+function mix(a: string, b: string, t: number): string {
+  const pa = parseHex(a);
+  const pb = parseHex(b);
+  const r = Math.round(pa[0] + (pb[0] - pa[0]) * t);
+  const g = Math.round(pa[1] + (pb[1] - pa[1]) * t);
+  const bl = Math.round(pa[2] + (pb[2] - pa[2]) * t);
+  return `rgb(${r}, ${g}, ${bl})`;
+}
+
+function parseHex(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  return [
+    parseInt(h.slice(0, 2), 16),
+    parseInt(h.slice(2, 4), 16),
+    parseInt(h.slice(4, 6), 16),
+  ];
 }
 
 function StreamChart({

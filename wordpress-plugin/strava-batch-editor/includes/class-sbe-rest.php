@@ -80,6 +80,16 @@ final class SBE_REST {
 
 		register_rest_route(
 			'sbe/v1',
+			'/stats',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'stats' ),
+				'permission_callback' => $auth,
+			)
+		);
+
+		register_rest_route(
+			'sbe/v1',
 			'/geocode',
 			array(
 				'methods'             => 'GET',
@@ -193,6 +203,23 @@ final class SBE_REST {
 			return $res;
 		}
 		return new WP_REST_Response( $res, 200 );
+	}
+
+	public function stats(): WP_REST_Response|WP_Error {
+		$uid = get_current_user_id();
+		$ath = SBE_Strava_Client::get( $uid, '/athlete' );
+		if ( is_wp_error( $ath ) ) {
+			return $ath;
+		}
+		$id = (int) ( $ath['id'] ?? 0 );
+		if ( ! $id ) {
+			return new WP_Error( 'sbe_no_athlete', 'No athlete id', array( 'status' => 401 ) );
+		}
+		$stats = SBE_Strava_Client::get( $uid, "/athletes/$id/stats" );
+		if ( is_wp_error( $stats ) ) {
+			return $stats;
+		}
+		return new WP_REST_Response( $stats, 200 );
 	}
 
 	public function geocode( WP_REST_Request $req ): WP_REST_Response|WP_Error {
