@@ -54,7 +54,14 @@ export default function AppShell({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 p-4 md:p-8">
+      <main
+        className="mx-auto w-full flex-1 space-y-6 py-4 md:py-8"
+        style={{
+          maxWidth: "1440px",
+          paddingLeft: "clamp(1rem, 6vw, 8rem)",
+          paddingRight: "clamp(1rem, 6vw, 8rem)",
+        }}
+      >
         <header className="animate-fade-in flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <AppLogo size={40} />

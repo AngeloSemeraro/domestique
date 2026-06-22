@@ -17,7 +17,14 @@ const CREDITS = [
 export default function Footer() {
   return (
     <footer className="mt-12 border-t border-[color:var(--border)] bg-[color:var(--bg-elev)]/40">
-      <div className="mx-auto max-w-7xl space-y-4 p-6 text-xs text-[color:var(--fg-muted)] md:p-8">
+      <div
+        className="mx-auto space-y-4 py-6 text-xs text-[color:var(--fg-muted)] md:py-8"
+        style={{
+          maxWidth: "1440px",
+          paddingLeft: "clamp(1rem, 6vw, 8rem)",
+          paddingRight: "clamp(1rem, 6vw, 8rem)",
+        }}
+      >
         <p className="leading-relaxed">
           <strong className="text-[color:var(--fg)]">
             Free software, built in the open.
