@@ -20,6 +20,17 @@ export default defineConfig({
       "@": path.resolve(__dirname, "../src"),
     },
   },
+  // Next.js statically replaces process.env.NODE_ENV; Vite in lib mode
+  // doesn't, and React (plus a few dev-mode shims) reference it at module
+  // load — without this define the bundle throws "Can't find variable:
+  // process" before mounting. We also stub the wider `process` global so
+  // any rogue `process.env.X` read from a transitive dep evaluates to
+  // undefined rather than crashing.
+  define: {
+    "process.env.NODE_ENV": JSON.stringify("production"),
+    "process.env": "({})",
+    "process.platform": JSON.stringify("browser"),
+  },
   build: {
     outDir: path.resolve(__dirname, "strava-batch-editor/assets"),
     emptyOutDir: false, // keep the icon.png that already lives there
