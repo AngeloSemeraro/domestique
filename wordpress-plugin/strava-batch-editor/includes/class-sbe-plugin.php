@@ -38,11 +38,22 @@ final class SBE_Plugin {
 	}
 
 	/**
-	 * Returns the redirect URI we send to Strava during OAuth. Site-relative
-	 * so it Just Works whether WP is on a sub-path or its own domain.
+	 * Returns the redirect URI we send to Strava during OAuth. We use
+	 * admin-post.php (not a REST route) because REST endpoints in WordPress
+	 * don't honour the auth cookies during plain browser navigation —
+	 * `is_user_logged_in()` returns false there without an X-WP-Nonce
+	 * header, which broke the OAuth start flow.
 	 */
 	public static function oauth_redirect_uri(): string {
-		return rest_url( 'sbe/v1/auth/callback' );
+		return admin_url( 'admin-post.php?action=sbe_oauth_callback' );
+	}
+
+	public static function oauth_login_url( string $return = '' ): string {
+		$url = admin_url( 'admin-post.php?action=sbe_oauth_login' );
+		if ( $return !== '' ) {
+			$url = add_query_arg( 'return', rawurlencode( $return ), $url );
+		}
+		return $url;
 	}
 
 	/**

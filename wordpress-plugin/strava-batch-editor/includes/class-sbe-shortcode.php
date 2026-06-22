@@ -78,7 +78,7 @@ final class SBE_Shortcode {
 		if ( ! SBE_Plugin::is_configured() ) {
 			return $this->not_configured_notice();
 		}
-		$url = add_query_arg( 'return', rawurlencode( $this->current_url() ), rest_url( 'sbe/v1/auth/login' ) );
+		$url = SBE_Plugin::oauth_login_url( $this->current_url() );
 		return sprintf(
 			'<a class="sbe-connect-btn" href="%s" style="display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1.1rem;border-radius:9999px;background:#FC4C02;color:#fff;font-weight:600;text-decoration:none;">%s</a>',
 			esc_url( $url ),
@@ -120,9 +120,7 @@ final class SBE_Shortcode {
 		$bootstrap = array(
 			'restRoot'  => esc_url_raw( rest_url( 'sbe/v1' ) ),
 			'nonce'     => wp_create_nonce( 'wp_rest' ),
-			'loginUrl'  => esc_url_raw(
-				add_query_arg( 'return', rawurlencode( $this->current_url() ), rest_url( 'sbe/v1/auth/login' ) )
-			),
+			'loginUrl'  => esc_url_raw( SBE_Plugin::oauth_login_url( $this->current_url() ) ),
 			'logoutUrl' => esc_url_raw( rest_url( 'sbe/v1/auth/logout' ) ),
 			'revokeUrl' => esc_url_raw( rest_url( 'sbe/v1/auth/revoke' ) ),
 			'meUrl'     => esc_url_raw( rest_url( 'sbe/v1/me' ) ),

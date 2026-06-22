@@ -1,12 +1,16 @@
 <?php
 /**
- * Strava OAuth flow: login redirect, callback, logout, revoke.
+ * Strava OAuth flow.
  *
- * Routes (registered on rest_api_init):
- *   GET  /wp-json/sbe/v1/auth/login    → redirects user to Strava authorize page
- *   GET  /wp-json/sbe/v1/auth/callback → Strava redirects back here with ?code
- *   POST /wp-json/sbe/v1/auth/logout   → clears the WP user's token
- *   POST /wp-json/sbe/v1/auth/revoke   → also deauthorizes on Strava's side
+ * The user-facing redirects (login + callback) hang off admin-post.php
+ * so they honour the regular WordPress cookie auth during plain browser
+ * navigation:
+ *
+ *   /wp-admin/admin-post.php?action=sbe_oauth_login&return=…
+ *   /wp-admin/admin-post.php?action=sbe_oauth_callback?code=…&state=…
+ *
+ * Logout / revoke / me stay on the REST API because they're hit via
+ * fetch() from the React bundle with the X-WP-Nonce header.
  *
  * @package StravaBatchEditor
  */
@@ -25,28 +29,17 @@ final class SBE_OAuth {
 	}
 
 	public function register(): void {
-		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
+		// Browser-facing OAuth handlers — admin-post.php sees WP cookies.
+		add_action( 'admin_post_sbe_oauth_login', array( $this, 'admin_post_login' ) );
+		add_action( 'admin_post_nopriv_sbe_oauth_login', array( $this, 'admin_post_login' ) );
+		add_action( 'admin_post_sbe_oauth_callback', array( $this, 'admin_post_callback' ) );
+		add_action( 'admin_post_nopriv_sbe_oauth_callback', array( $this, 'admin_post_callback' ) );
+
+		// JSON endpoints that the React bundle calls.
+		add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
 	}
 
-	public function register_routes(): void {
-		register_rest_route(
-			'sbe/v1',
-			'/auth/login',
-			array(
-				'methods'             => 'GET',
-				'callback'            => array( $this, 'login' ),
-				'permission_callback' => '__return_true', // user must be logged into WP; checked inside.
-			)
-		);
-		register_rest_route(
-			'sbe/v1',
-			'/auth/callback',
-			array(
-				'methods'             => 'GET',
-				'callback'            => array( $this, 'callback' ),
-				'permission_callback' => '__return_true',
-			)
-		);
+	public function register_rest_routes(): void {
 		register_rest_route(
 			'sbe/v1',
 			'/auth/logout',
@@ -83,46 +76,56 @@ final class SBE_OAuth {
 		return true;
 	}
 
-	public function login( WP_REST_Request $req ) {
+	/* ---- Browser-facing handlers (admin-post.php) ---- */
+
+	public function admin_post_login(): void {
+		$return = isset( $_GET['return'] ) ? esc_url_raw( wp_unslash( (string) $_GET['return'] ) ) : home_url( '/' );
+		$return = $this->safe_return( $return );
+
 		if ( ! is_user_logged_in() ) {
-			wp_safe_redirect( wp_login_url( $this->page_return_url( $req ) ) );
+			wp_safe_redirect( wp_login_url( SBE_Plugin::oauth_login_url( $return ) ) );
 			exit;
 		}
 		if ( ! SBE_Plugin::is_configured() ) {
-			return new WP_Error( 'sbe_not_configured', 'Plugin not configured (see Settings → Strava Batch Editor)', array( 'status' => 500 ) );
+			wp_die( esc_html__( 'Strava Batch Editor is not configured (Settings → Strava Batch Editor).', 'strava-batch-editor' ) );
 		}
 		$settings = SBE_Plugin::get_settings();
 		$state    = wp_generate_password( 24, false );
-		set_transient( 'sbe_oauth_state_' . $state, array(
-			'user_id' => get_current_user_id(),
-			'return'  => $this->page_return_url( $req ),
-		), 10 * MINUTE_IN_SECONDS );
+		set_transient(
+			'sbe_oauth_state_' . $state,
+			array(
+				'user_id' => get_current_user_id(),
+				'return'  => $return,
+			),
+			10 * MINUTE_IN_SECONDS
+		);
 
 		$params = array(
-			'client_id'        => $settings['client_id'],
-			'response_type'    => 'code',
-			'redirect_uri'     => SBE_Plugin::oauth_redirect_uri(),
-			'approval_prompt'  => 'auto',
-			'scope'            => self::SCOPES,
-			'state'            => $state,
+			'client_id'       => $settings['client_id'],
+			'response_type'   => 'code',
+			'redirect_uri'    => SBE_Plugin::oauth_redirect_uri(),
+			'approval_prompt' => 'auto',
+			'scope'           => self::SCOPES,
+			'state'           => $state,
 		);
 		wp_redirect( 'https://www.strava.com/oauth/authorize?' . http_build_query( $params ) );
 		exit;
 	}
 
-	public function callback( WP_REST_Request $req ) {
-		$code  = (string) $req->get_param( 'code' );
-		$state = (string) $req->get_param( 'state' );
-		$err   = (string) $req->get_param( 'error' );
+	public function admin_post_callback(): void {
+		$code  = isset( $_GET['code'] ) ? (string) wp_unslash( $_GET['code'] ) : '';
+		$state = isset( $_GET['state'] ) ? (string) wp_unslash( $_GET['state'] ) : '';
+		$err   = isset( $_GET['error'] ) ? (string) wp_unslash( $_GET['error'] ) : '';
 
 		$state_data = $state ? get_transient( 'sbe_oauth_state_' . $state ) : false;
 		if ( $state ) {
 			delete_transient( 'sbe_oauth_state_' . $state );
 		}
 		if ( ! is_array( $state_data ) || ! isset( $state_data['user_id'] ) ) {
-			return new WP_Error( 'sbe_bad_state', 'Invalid OAuth state', array( 'status' => 400 ) );
+			wp_die( esc_html__( 'Invalid OAuth state. Please start the connection again.', 'strava-batch-editor' ) );
 		}
-		$return = is_string( $state_data['return'] ?? null ) ? $state_data['return'] : home_url( '/' );
+		$return = is_string( $state_data['return'] ?? null ) ? $this->safe_return( (string) $state_data['return'] ) : home_url( '/' );
+
 		if ( $err || ! $code ) {
 			wp_safe_redirect( add_query_arg( 'sbe_error', rawurlencode( $err ?: 'missing_code' ), $return ) );
 			exit;
@@ -147,54 +150,58 @@ final class SBE_OAuth {
 		exit;
 	}
 
+	/* ---- JSON endpoints (REST) ---- */
+
 	public function logout(): WP_REST_Response {
 		SBE_Token_Store::clear( get_current_user_id() );
 		return new WP_REST_Response( array( 'ok' => true ), 200 );
 	}
 
 	public function revoke(): WP_REST_Response {
-		$tok = SBE_Token_Store::get( get_current_user_id() );
+		$tok     = SBE_Token_Store::get( get_current_user_id() );
 		$revoked = false;
 		if ( $tok && ! empty( $tok['access_token'] ) ) {
-			$resp = SBE_Strava_Client::deauthorize( (string) $tok['access_token'] );
+			$resp    = SBE_Strava_Client::deauthorize( (string) $tok['access_token'] );
 			$revoked = ! is_wp_error( $resp );
 		}
 		SBE_Token_Store::clear( get_current_user_id() );
 		return new WP_REST_Response( array( 'ok' => true, 'revoked' => $revoked ), 200 );
 	}
 
-	public function me(): WP_REST_Response|WP_Error {
+	public function me(): WP_REST_Response {
 		$tok = SBE_Token_Store::get( get_current_user_id() );
 		if ( ! $tok ) {
 			return new WP_REST_Response( array( 'authenticated' => false ), 200 );
 		}
 		$ath = SBE_Strava_Client::get( get_current_user_id(), '/athlete' );
 		if ( is_wp_error( $ath ) ) {
-			return new WP_REST_Response( array( 'authenticated' => false, 'error' => $ath->get_error_message() ), 200 );
+			return new WP_REST_Response(
+				array(
+					'authenticated' => false,
+					'error'         => $ath->get_error_message(),
+				),
+				200
+			);
 		}
 		return new WP_REST_Response(
 			array(
 				'authenticated' => true,
 				'athlete'       => array(
-					'id'     => (int) ( $ath['id'] ?? 0 ),
-					'name'   => trim( ( $ath['firstname'] ?? '' ) . ' ' . ( $ath['lastname'] ?? '' ) ),
-					'bikes'  => $ath['bikes'] ?? array(),
-					'shoes'  => $ath['shoes'] ?? array(),
+					'id'    => (int) ( $ath['id'] ?? 0 ),
+					'name'  => trim( ( $ath['firstname'] ?? '' ) . ' ' . ( $ath['lastname'] ?? '' ) ),
+					'bikes' => $ath['bikes'] ?? array(),
+					'shoes' => $ath['shoes'] ?? array(),
 				),
 			),
 			200
 		);
 	}
 
-	private function page_return_url( WP_REST_Request $req ): string {
-		$return = $req->get_param( 'return' );
-		if ( is_string( $return ) && $return !== '' ) {
-			// allow only same-host returns
-			$host = wp_parse_url( home_url(), PHP_URL_HOST );
-			$rhost = wp_parse_url( $return, PHP_URL_HOST );
-			if ( $rhost === $host ) {
-				return $return;
-			}
+	private function safe_return( string $url ): string {
+		$host  = wp_parse_url( home_url(), PHP_URL_HOST );
+		$rhost = wp_parse_url( $url, PHP_URL_HOST );
+		if ( $rhost === $host ) {
+			return $url;
 		}
 		return home_url( '/' );
 	}
