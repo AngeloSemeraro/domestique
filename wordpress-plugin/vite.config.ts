@@ -28,7 +28,7 @@ export default defineConfig({
   // undefined rather than crashing.
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
-    "process.env": "({})",
+    "process.env": JSON.stringify({}),
     "process.platform": JSON.stringify("browser"),
   },
   build: {
