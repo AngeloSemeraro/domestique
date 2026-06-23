@@ -16,6 +16,7 @@ import type { StreamedActivity } from "@/lib/gpx";
 
 export type AnalyzerSeed = ParsedTrack & {
   rawSources?: StreamedActivity[];
+  seamIndices?: number[];
 };
 import Editor from "./Editor";
 import MergeTab from "./MergeTab";

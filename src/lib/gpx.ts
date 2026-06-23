@@ -38,6 +38,9 @@ export function combineSourcesForDisplay(
   start_date: string;
   streams: Streams;
   point_count: number;
+  /** Indices in the flat stream where a new source begins, excluding 0.
+   *  Used to draw the dashed seam markers on the Inspector charts. */
+  seam_indices: number[];
 } {
   const sorted = [...sources].sort(
     (a, b) => +new Date(a.start_date) - +new Date(b.start_date)
@@ -47,6 +50,7 @@ export function combineSourcesForDisplay(
       start_date: new Date().toISOString(),
       streams: { latlng: { data: [] }, time: { data: [] } },
       point_count: 0,
+      seam_indices: [],
     };
   }
   const baseMs = +new Date(sorted[0].start_date);
@@ -56,7 +60,10 @@ export function combineSourcesForDisplay(
   const heartrate: Array<number | undefined> = [];
   const cadence: Array<number | undefined> = [];
   const temperature: Array<number | undefined> = [];
-  for (const s of sorted) {
+  const seam_indices: number[] = [];
+  for (let si = 0; si < sorted.length; si++) {
+    const s = sorted[si];
+    if (si > 0) seam_indices.push(latlng.length);
     const srcMs = +new Date(s.start_date);
     const offsetSec = Math.round((srcMs - baseMs) / 1000);
     const sll = s.streams.latlng?.data ?? [];
@@ -85,6 +92,7 @@ export function combineSourcesForDisplay(
       ...(temperature.some((v) => v !== undefined) ? { temperature: { data: temperature } } : {}),
     },
     point_count: latlng.length,
+    seam_indices,
   };
 }
 

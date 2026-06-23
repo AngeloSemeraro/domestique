@@ -42,13 +42,19 @@ type Step =
 type Loaded = ParsedTrack & {
   filename: string;
   rawSources?: StreamedActivity[];
+  seamIndices?: number[];
 };
 
 export default function AnalyzerTab({
   seed,
   onConsumeSeed,
 }: {
-  seed?: (ParsedTrack & { rawSources?: StreamedActivity[] }) | null;
+  seed?:
+    | (ParsedTrack & {
+        rawSources?: StreamedActivity[];
+        seamIndices?: number[];
+      })
+    | null;
   onConsumeSeed?: () => void;
 }) {
   const [file, setFile] = useState<Loaded | null>(null);
@@ -67,6 +73,7 @@ export default function AnalyzerTab({
         ...seed,
         filename: `${seed.name}.gpx (from Merge)`,
         rawSources: seed.rawSources,
+        seamIndices: seed.seamIndices,
       });
       setName(seed.name);
       setParseError(null);
@@ -494,6 +501,7 @@ export default function AnalyzerTab({
                 series={computeSpeedSeries(file.streams, movement.maxJumpKm)}
                 runs={analysis.runs}
                 totalPoints={file.point_count}
+                seamIndices={file.seamIndices}
               />
               {analysis.hasHR && (
                 <StreamChart
@@ -506,6 +514,7 @@ export default function AnalyzerTab({
                   )}
                   runs={analysis.runs}
                   totalPoints={file.point_count}
+                  seamIndices={file.seamIndices}
                 />
               )}
               {analysis.hasCad && (
@@ -519,12 +528,14 @@ export default function AnalyzerTab({
                   )}
                   runs={analysis.runs}
                   totalPoints={file.point_count}
+                  seamIndices={file.seamIndices}
                 />
               )}
               {analysis.hasAlt && (
                 <ElevationChart
                   streams={file.streams}
                   totalPoints={file.point_count}
+                  seamIndices={file.seamIndices}
                 />
               )}
             </div>
@@ -703,10 +714,14 @@ function Stat({
 function ElevationChart({
   streams,
   totalPoints,
+  seamIndices,
 }: {
   streams: Streams;
   totalPoints: number;
+  seamIndices?: number[];
 }) {
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const ll = streams.latlng?.data ?? [];
   const alt = streams.altitude?.data ?? [];
   if (alt.length === 0 || ll.length === 0) return null;
@@ -796,32 +811,110 @@ function ElevationChart({
           {Math.round(loss)} m
         </span>
       </div>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        preserveAspectRatio="none"
-        className="block h-20 w-full rounded bg-[color:var(--bg-input)]"
-      >
-        {/* gradient-colored bars under the profile */}
-        {samples.map((s, i) => (
-          <rect
-            key={i}
-            x={xScale(s.x)}
-            y={yScale(s.y)}
-            width={barWidth + 0.5}
-            height={H - yScale(s.y)}
-            fill={gradColor(s.gradPct)}
-            opacity={0.85}
+      <div className="relative">
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          className="block h-20 w-full rounded bg-[color:var(--bg-input)] touch-none"
+          onPointerMove={(e) => {
+            const svg = svgRef.current;
+            if (!svg) return;
+            const rect = svg.getBoundingClientRect();
+            const xPx = e.clientX - rect.left;
+            const frac = Math.max(0, Math.min(1, xPx / rect.width));
+            let best = 0;
+            let bestDist = Infinity;
+            for (let i = 0; i < samples.length; i++) {
+              const d = Math.abs(samples[i].x / Math.max(1, totalPoints - 1) - frac);
+              if (d < bestDist) {
+                bestDist = d;
+                best = i;
+              }
+            }
+            setHoverIdx(best);
+          }}
+          onPointerLeave={() => setHoverIdx(null)}
+        >
+          {/* gradient-colored bars under the profile */}
+          {samples.map((s, i) => (
+            <rect
+              key={i}
+              x={xScale(s.x)}
+              y={yScale(s.y)}
+              width={barWidth + 0.5}
+              height={H - yScale(s.y)}
+              fill={gradColor(s.gradPct)}
+              opacity={0.85}
+            />
+          ))}
+          {/* outline line on top */}
+          <path
+            d={linePath}
+            fill="none"
+            stroke="#0ea5e9"
+            strokeWidth={1.2}
+            strokeOpacity={0.9}
           />
-        ))}
-        {/* outline line on top */}
-        <path
-          d={linePath}
-          fill="none"
-          stroke="#0ea5e9"
-          strokeWidth={1.2}
-          strokeOpacity={0.9}
-        />
-      </svg>
+          {/* seam markers (dashed) */}
+          {(seamIndices ?? []).map((idx, i) => (
+            <line
+              key={`seam-${i}`}
+              x1={xScale(idx)}
+              x2={xScale(idx)}
+              y1={0}
+              y2={H}
+              stroke="currentColor"
+              strokeOpacity={0.55}
+              strokeWidth={1}
+              strokeDasharray="3 3"
+              className="text-[color:var(--fg-muted)]"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+          {/* hover vertical line */}
+          {hoverIdx !== null && samples[hoverIdx] && (
+            <line
+              x1={xScale(samples[hoverIdx].x)}
+              x2={xScale(samples[hoverIdx].x)}
+              y1={0}
+              y2={H}
+              stroke="#0ea5e9"
+              strokeWidth={1}
+              vectorEffect="non-scaling-stroke"
+            />
+          )}
+        </svg>
+        {hoverIdx !== null && samples[hoverIdx] && (() => {
+          const s = samples[hoverIdx];
+          const leftPct = (s.x / Math.max(1, totalPoints - 1)) * 100;
+          const flip = leftPct > 70;
+          return (
+            <div
+              className="pointer-events-none absolute top-1 z-10 whitespace-nowrap rounded border border-[color:var(--border)] bg-[color:var(--bg-elev)] px-1.5 py-1 text-[10px] font-mono shadow-md"
+              style={{
+                left: `${leftPct}%`,
+                transform: flip ? "translateX(-100%) translateX(-4px)" : "translateX(4px)",
+              }}
+            >
+              <div>{Math.round(s.y)} m</div>
+              <div
+                style={{
+                  color:
+                    s.gradPct > 1
+                      ? "#ef4444"
+                      : s.gradPct < -1
+                      ? "#10b981"
+                      : "var(--fg-muted)",
+                }}
+              >
+                {s.gradPct >= 0 ? "+" : ""}
+                {s.gradPct.toFixed(1)}%
+              </div>
+            </div>
+          );
+        })()}
+      </div>
       <div className="mt-1 flex items-center gap-2 text-[10px] text-[color:var(--fg-muted)]">
         <span className="inline-flex items-center gap-1">
           <span
@@ -893,6 +986,7 @@ function StreamChart({
   series,
   runs,
   totalPoints,
+  seamIndices,
 }: {
   title: string;
   unit: string;
@@ -901,6 +995,7 @@ function StreamChart({
   series: Array<number | null>;
   runs: Array<{ start: number; end: number }>;
   totalPoints: number;
+  seamIndices?: number[];
 }) {
   const W = 1000;
   const H = 80;
@@ -974,6 +1069,21 @@ function StreamChart({
             strokeWidth={s.kept ? 1.5 : 1}
             strokeOpacity={s.kept ? 1 : 0.25}
             className={s.kept ? "" : "text-[color:var(--fg-muted)]"}
+          />
+        ))}
+        {(seamIndices ?? []).map((idx, i) => (
+          <line
+            key={`seam-${i}`}
+            x1={xScale(idx)}
+            x2={xScale(idx)}
+            y1={0}
+            y2={H}
+            stroke="currentColor"
+            strokeOpacity={0.55}
+            strokeWidth={1}
+            strokeDasharray="3 3"
+            className="text-[color:var(--fg-muted)]"
+            vectorEffect="non-scaling-stroke"
           />
         ))}
       </svg>

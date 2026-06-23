@@ -79,7 +79,10 @@ export default function MergeTab({
   onSendToAnalyzer,
 }: {
   onSendToAnalyzer?: (
-    seed: ParsedTrack & { rawSources?: StreamedActivity[] }
+    seed: ParsedTrack & {
+      rawSources?: StreamedActivity[];
+      seamIndices?: number[];
+    }
   ) => void;
 }) {
   const today = new Date();
@@ -409,6 +412,7 @@ export default function MergeTab({
         streams: display.streams,
         point_count: display.point_count,
         rawSources: orderedForGpx,
+        seamIndices: display.seam_indices,
       });
       setStep({ kind: "idle" });
     } catch (e) {
