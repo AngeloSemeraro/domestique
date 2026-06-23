@@ -166,9 +166,37 @@ react-day-picker · iron-session · fit-file-parser · OpenStreetMap/Nominatim
 (reverse geocoding). See [CONTRIBUTING.md](CONTRIBUTING.md) for the project
 layout and how to help.
 
+## 🤖 Vibe coded with Claude
+
+This whole thing was vibe coded using **Claude Code**. I'm not a
+developer and I don't read the code — I described what I wanted,
+tested the result in the browser, and shipped what worked. You should
+know what you're installing: this is AI-generated software, maintained
+by one person in their spare time who can't debug it line by line.
+
+## ⚠️ As-is, no support
+
+Strava Batch Editor is provided **as is**, with no warranty of any kind
+(see GPLv3 sections 15-16 for the legal text). In plain English:
+
+- **No guaranteed updates.** If Strava changes its API, this tool may
+  break. There's no roadmap and no release schedule.
+- **No support channel.** There's no help desk, no email, no Discord.
+  Bug reports and pull requests on GitHub Issues are welcome but will
+  be looked at when (and if) time allows — and any fix will most
+  likely be vibe coded too.
+- **Use at your own risk.** It only writes to *your* Strava account
+  using *your* API credentials, so the blast radius is your own data —
+  but please review what a bulk edit does on a small selection before
+  hitting "Apply" to 500 activities.
+- **Fork it.** It's GPLv3 — if you need a fix and nobody's coming,
+  clone the repo (or point your own AI at it) and change it yourself.
+  That's the whole point of free software.
+
+Not affiliated with Strava, Inc.
+
 ## License
 
-[GPLv3](LICENSE) — free software. Use it, share it, improve it. Provided as is,
-with no warranty; use at your own risk. Not affiliated with Strava, Inc.
+[GPLv3](LICENSE) — free software. Use it, share it, improve it.
 
 If it saves you time, share it with a friend who rides. 🚴
