@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ASCII Visualizer — real-time webcam ASCII filter</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a0a'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='20' fill='%234ade80' text-anchor='middle'%3E%40%3C/text%3E%3C/svg%3E"
+    />
+    <meta
+      name="description"
+      content="Turn your webcam feed into real-time ASCII art. Runs entirely in your browser — nothing is uploaded."
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at 50% 0%, #171717, #0a0a0a 60%);
+        color: #e8e8e8;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 32px 16px 64px;
+      }
+      header {
+        text-align: center;
+        margin-bottom: 24px;
+        max-width: 640px;
+      }
+      header h1 {
+        margin: 0 0 8px;
+        font-size: clamp(1.8rem, 4vw, 2.6rem);
+        letter-spacing: -0.02em;
+      }
+      header p {
+        margin: 0;
+        color: #9a9a9a;
+        line-height: 1.5;
+      }
+      footer {
+        margin-top: 40px;
+        color: #6b6b6b;
+        font-size: 13px;
+        text-align: center;
+      }
+      footer a {
+        color: #4ade80;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>ASCII Visualizer</h1>
+      <p>
+        A real-time ASCII art filter for your webcam. Everything runs locally in
+        your browser — your camera feed never leaves this device.
+      </p>
+    </header>
+
+    <main id="app"></main>
+
+    <footer>
+      <p>
+        Runs standalone or embedded anywhere. Vibe coded with Claude — provided
+        as-is. <a href="https://github.com/AngeloSemeraro/ASCII-Visualizer">Source</a>
+      </p>
+    </footer>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

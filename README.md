@@ -1,202 +1,111 @@
-<div align="center">
+# ASCII Visualizer
 
-<img src="public/icon.png" width="96" alt="Strava Batch Editor logo" />
+Real-time **ASCII art filter for your webcam**. It samples the camera feed,
+maps brightness to characters, and renders the result on a canvas — live, at
+video frame rate. Everything runs in the browser; **the camera stream never
+leaves the device.**
 
-# Strava Batch Editor
+- 🎥 Live webcam → ASCII, with color, mono, and inverted modes
+- 🎚️ Adjustable resolution, contrast, brightness, character ramps
+- 📸 Save a frame as PNG or copy the current frame as plain text
+- 🧩 Runs **standalone** *and* **embeds anywhere** (WordPress plugin included)
+- 🪶 Framework-free TypeScript, no runtime dependencies
 
-Edit, merge and clean up your Strava rides in bulk — runs entirely on
-your own machine, talks only to your own Strava account.
-
-**Free software (GPLv3) · self-hosted · no servers, no tracking, no accounts.**
-
-</div>
-
----
-
-## What it does
-
-Three tools in one local web app:
-
-### 🖊️ Batch edit
-Select many activities at once and change them in a single pass:
-- **Sport type** (Ride, MountainBikeRide, GravelRide, Run, TrailRun…)
-- **Gear** (assign one of your bikes)
-- **Activity type** (Default / Race / Workout / Long run)
-- **Commute**, **Trainer (indoor)**, **Hide from feed** flags
-- **Rename** inline (pencil next to any activity name, auto-saves to Strava)
-
-Filter the list by date range (quick-range chips: 30d / 90d / 6m / 1y / YTD /
-All), sport, name and location.
-
-### 🔀 Merge rides
-Combine multiple rides into one new activity:
-- Sources can be **Strava activities and/or local `.gpx` / `.fit` files**, in
-  any mix
-- **Movement filter** drops non-cycling stretches (long pauses, a train/car
-  transfer between sessions) using speed + cadence + heart-rate signals, so the
-  merged ride only contains the parts you actually rode
-- **Average-speed control**: keep natural pacing, match a source's average, or
-  hit a custom km/h target
-- **Output**: upload straight to Strava, or download a **TCX** (recommended —
-  carries the real distance odometer so the total is correct) or **GPX**
-
-### 🔍 Inspector
-Drop a single `.gpx` / `.fit` (or send the merge result here) to:
-- see which sensors it has (GPS / HR / cadence / altitude) and their averages
-- tune the movement filter live with kept/dropped charts for speed, HR, cadence
-- download the cleaned file or publish it to Strava
-
-> **Why TCX for uploads?** A GPX file has no distance field, so Strava recomputes
-> distance by summing GPS points — which inflates the total when two source rides
-> are far apart (e.g. you drove between them). TCX carries a per-point
-> `DistanceMeters` odometer that skips those jumps, so Strava shows the real
-> ridden distance. This is the same principle the FIT files other tools upload
-> rely on.
-
----
-
-## Run it yourself (≈ 5 minutes)
-
-This app is **self-hosted**: it runs on your computer, your Strava credentials
-live only in a local `.env.local` file, and nothing is ever sent to a third
-party. You need [Node.js 18+](https://nodejs.org) and a Strava account.
+## Quick start
 
 ```bash
-git clone https://github.com/AngeloSemeraro/strava_batch_editor.git
-cd strava_batch_editor
 npm install
-npm run dev
+npm run dev        # standalone app at http://localhost:5173
 ```
 
-Open <http://localhost:3000>. On first run a **setup wizard** walks you through:
+Camera access requires a secure context — `localhost` and HTTPS both qualify.
 
-1. Creating a free Strava API application (it opens the portal and tells you
-   exactly what to fill in — Authorization Callback Domain = `localhost`)
-2. Pasting the **Client ID** and **Client Secret** back into the wizard
-3. It generates a random session secret and writes everything to `.env.local`
-   for you
+## Builds
 
-Restart the dev server (`Ctrl+C`, then `npm run dev`), reload, and click
-**Connect with Strava**.
+| Command              | Output          | Purpose                                   |
+| -------------------- | --------------- | ----------------------------------------- |
+| `npm run build`      | `dist/`         | Standalone static site                    |
+| `npm run build:embed`| `dist-embed/`   | Self-mounting IIFE widget for embedding   |
+| `npm run build:all`  | both            | Everything                                |
+| `npm run typecheck`  | —               | Type-check without emitting               |
 
-### Manual setup (optional)
+## Embedding in another page
 
-If you'd rather skip the wizard, copy `.env.example` to `.env.local` and fill:
+Load the widget bundle and add a container element. Options are read from
+`data-*` attributes:
 
-```env
-STRAVA_CLIENT_ID=12345
-STRAVA_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-SESSION_SECRET=<openssl rand -base64 32>
+```html
+<div
+  data-ascii-visualizer
+  data-columns="140"
+  data-color-mode="mono"
+  data-preset="blocks"
+  data-controls="true"
+></div>
+<script src="/path/to/ascii-visualizer.js"></script>
 ```
 
-Get the Client ID/Secret at <https://www.strava.com/settings/api>
-(Authorization Callback Domain: `localhost`).
+Or mount programmatically:
 
----
-
-## Strava rate limits
-
-Strava allows 200 requests / 15 min and 2,000 / day per application. Because
-every user runs **their own** app, you get the full quota to yourself. Bulk
-edits are throttled (250 ms between writes) and stop cleanly if you hit a limit.
-
----
-
-## Also available: WordPress plugin
-
-The same three tools (Batch edit, Merge rides, Inspector) ship as a
-**self-contained WordPress plugin** — drop a shortcode on any page and the
-app renders right there. Useful if you already host a WordPress site and
-don't want to run Node locally.
-
-| | Next.js (this repo) | WordPress plugin |
-|---|---|---|
-| Where it runs | Your computer (`npm run dev`) | Your WordPress site |
-| Login | Browser cookie session | Standard WordPress login |
-| Multi-user | Single user per install | Each WP user connects their own Strava |
-| Access | `localhost:3000` | Any page with `[strava_batch_editor]` |
-
-**Shortcodes** the plugin exposes:
-
-```
-[strava_batch_editor]                     full app, all three tabs
-[strava_batch_editor tab="edit"]          Batch edit only
-[strava_batch_editor tab="merge"]         Merge rides only
-[strava_batch_editor tab="inspector"]     Inspector only
-[strava_batch_editor_login]               just the Connect with Strava button
+```js
+AsciiVisualizer.createVisualizer(document.getElementById("cam"), {
+  columns: 120,
+  colorMode: "color",
+  controls: true,
+});
 ```
 
-**Get it:**
+### Supported `data-*` attributes
 
-- Pre-built installable ZIPs land on the [Releases page](https://github.com/AngeloSemeraro/strava_batch_editor/releases)
-- Or build from source — the plugin lives under [`wordpress-plugin/`](wordpress-plugin/):
+| Attribute          | Values                                             | Default    |
+| ------------------ | -------------------------------------------------- | ---------- |
+| `data-columns`     | integer                                            | `110`      |
+| `data-color-mode`  | `color` \| `mono` \| `inverted`                    | `color`    |
+| `data-preset`      | `standard` \| `detailed` \| `blocks` \| `minimal` \| `binary` | `standard` |
+| `data-controls`    | `true` \| `false`                                  | `true`     |
+| `data-autostart`   | `true` \| `false`                                  | `false`    |
+| `data-background`  | CSS color                                          | `#0a0a0a`  |
+| `data-foreground`  | CSS color (mono / inverted)                        | `#e8e8e8`  |
+| `data-mirror`      | `true` \| `false`                                  | `true`     |
+| `data-invert`      | `true` \| `false`                                  | `false`    |
 
-  ```bash
-  git clone https://github.com/AngeloSemeraro/strava_batch_editor.git
-  cd strava_batch_editor/wordpress-plugin
-  npm install && npm run build
-  zip -r strava-batch-editor.zip strava-batch-editor -x "*.DS_Store"
-  ```
+## WordPress
 
-  Then in WordPress: **Plugins → Add New → Upload Plugin** → pick the zip →
-  **Activate** → **Settings → Strava Batch Editor** to paste your Strava API
-  credentials. See [`wordpress-plugin/README.md`](wordpress-plugin/README.md)
-  for the full architecture (PHP backend, REST endpoints, OAuth flow).
+A ready-to-use plugin lives in [`wordpress-plugin/ascii-visualizer`](wordpress-plugin/ascii-visualizer).
+It registers an `[ascii_visualizer]` shortcode:
 
-Same GPLv3 license, same TCX-with-distance logic, same per-user token
-storage. Pick the build that fits your hosting story.
+```
+[ascii_visualizer columns="140" color="mono" preset="blocks"]
+```
 
----
+Build the widget with `npm run build:embed` and copy
+`dist-embed/ascii-visualizer.js` into the plugin's `assets/` folder (a prebuilt
+copy is already included). See the plugin's `readme.txt` for details.
 
-## A note on deleting / merging
+## Project layout
 
-Strava's public API has **no delete endpoint** and **no native merge**. So:
-- The Merge tool creates a *new* activity; the originals stay on your profile.
-  Hide them via the Batch edit tab or delete them by hand on strava.com.
-- Uploading a merge whose source rides are still on Strava will be rejected as
-  a duplicate — delete the sources first, or use the download option.
+```
+src/
+  ascii.ts            Pure conversion helpers (charsets, luma, mapping)
+  AsciiVisualizer.ts  Engine: webcam → sampling canvas → ASCII render loop
+  controls.ts         Control-panel UI (plain DOM)
+  widget.ts           Mount helper + [data-ascii-visualizer] auto-mount
+  main.ts             Standalone app entry
+  embed.ts            Embeddable IIFE entry (window.AsciiVisualizer)
+  styles.css          Scoped widget styles
+wordpress-plugin/     Shortcode plugin
+```
 
----
+## How it works
 
-## Tech
-
-Next.js (App Router) · React · TypeScript · Tailwind CSS · Geist · lucide-react ·
-react-day-picker · iron-session · fit-file-parser · OpenStreetMap/Nominatim
-(reverse geocoding). See [CONTRIBUTING.md](CONTRIBUTING.md) for the project
-layout and how to help.
-
-## 🤖 Vibe coded with Claude
-
-This whole thing was vibe coded using **Claude Code**. I'm not a
-developer and I don't read the code — I described what I wanted,
-tested the result in the browser, and shipped what worked. You should
-know what you're installing: this is AI-generated software, maintained
-by one person in their spare time who can't debug it line by line.
-
-## ⚠️ As-is, no support
-
-Strava Batch Editor is provided **as is**, with no warranty of any kind
-(see GPLv3 sections 15-16 for the legal text). In plain English:
-
-- **No guaranteed updates.** If Strava changes its API, this tool may
-  break. There's no roadmap and no release schedule.
-- **No support channel.** There's no help desk, no email, no Discord.
-  Bug reports and pull requests on GitHub Issues are welcome but will
-  be looked at when (and if) time allows — and any fix will most
-  likely be vibe coded too.
-- **Use at your own risk.** It only writes to *your* Strava account
-  using *your* API credentials, so the blast radius is your own data —
-  but please review what a bulk edit does on a small selection before
-  hitting "Apply" to 500 activities.
-- **Fork it.** It's GPLv3 — if you need a fix and nobody's coming,
-  clone the repo (or point your own AI at it) and change it yourself.
-  That's the whole point of free software.
-
-Not affiliated with Strava, Inc.
+1. `getUserMedia` provides a hidden `<video>` element.
+2. Each frame is drawn onto a tiny offscreen canvas sized to the target column
+   count (rows derived from the video aspect and monospace glyph ratio).
+3. Per cell, the luminance is adjusted (brightness/contrast/invert) and mapped
+   to a character from the active ramp.
+4. Characters are painted onto the display canvas, optionally tinted with the
+   source pixel color.
 
 ## License
 
-[GPLv3](LICENSE) — free software. Use it, share it, improve it.
-
-If it saves you time, share it with a friend who rides. 🚴
+[MIT](LICENSE) © Angelo Semeraro. Vibe coded with Claude — provided as-is.

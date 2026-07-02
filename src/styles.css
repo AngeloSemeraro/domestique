@@ -1,0 +1,182 @@
+/* All styles are scoped under .asciiv-root so the widget can be embedded in
+   any page (WordPress themes included) without leaking or being clobbered. */
+
+.asciiv-root {
+  --asciiv-bg: #0a0a0a;
+  --asciiv-panel: #141414;
+  --asciiv-border: #2a2a2a;
+  --asciiv-text: #e8e8e8;
+  --asciiv-muted: #9a9a9a;
+  --asciiv-accent: #4ade80;
+  --asciiv-danger: #f87171;
+  --asciiv-radius: 10px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  color: var(--asciiv-text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  box-sizing: border-box;
+}
+
+.asciiv-root *,
+.asciiv-root *::before,
+.asciiv-root *::after {
+  box-sizing: border-box;
+}
+
+.asciiv-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--asciiv-bg);
+  border: 1px solid var(--asciiv-border);
+  border-radius: var(--asciiv-radius);
+  overflow: hidden;
+}
+
+.asciiv-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.asciiv-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--asciiv-panel);
+  border: 1px solid var(--asciiv-border);
+  border-radius: var(--asciiv-radius);
+}
+
+.asciiv-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.asciiv-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.asciiv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.asciiv-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--asciiv-muted);
+}
+
+.asciiv-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.asciiv-value {
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  color: var(--asciiv-muted);
+  min-width: 2.5em;
+  text-align: right;
+}
+
+.asciiv-range {
+  flex: 1;
+  accent-color: var(--asciiv-accent);
+  width: 100%;
+}
+
+.asciiv-btn {
+  appearance: none;
+  border: 1px solid var(--asciiv-border);
+  background: #1e1e1e;
+  color: var(--asciiv-text);
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.asciiv-btn:hover {
+  background: #262626;
+  border-color: #3a3a3a;
+}
+
+.asciiv-btn-primary {
+  background: var(--asciiv-accent);
+  border-color: var(--asciiv-accent);
+  color: #062a12;
+}
+
+.asciiv-btn-primary:hover {
+  background: #3fce70;
+}
+
+.asciiv-select {
+  appearance: none;
+  background: #1e1e1e;
+  color: var(--asciiv-text);
+  border: 1px solid var(--asciiv-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.asciiv-select:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.asciiv-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.asciiv-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--asciiv-accent);
+  cursor: pointer;
+}
+
+.asciiv-status {
+  margin: 0;
+  min-height: 1em;
+  font-size: 13px;
+  color: var(--asciiv-muted);
+}
+
+.asciiv-status-error {
+  color: var(--asciiv-danger);
+}
+
+@media (max-width: 520px) {
+  .asciiv-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}

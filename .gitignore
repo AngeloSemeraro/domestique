@@ -1,9 +1,8 @@
 node_modules
-.next
-out
-.env
-.env.local
-*.log
+dist
+dist-embed
+*.local
 .DS_Store
-.vercel
-next-env.d.ts
+.vscode/*
+!.vscode/extensions.json
+npm-debug.log*
