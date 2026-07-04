@@ -261,7 +261,7 @@ function CreateAppStep({ callbackDomain }: { callbackDomain: string }) {
         href="https://www.strava.com/settings/api"
         target="_blank"
         rel="noreferrer"
-        className="inline-flex items-center gap-2 rounded-full bg-strava px-4 py-2 text-sm font-semibold text-white shadow-md shadow-strava/30 transition-all hover:scale-[1.02]"
+        className="inline-flex items-center gap-2 rounded-full bg-strava px-4 py-2 text-sm font-semibold !text-white shadow-md shadow-strava/30 transition-all hover:scale-[1.02]"
       >
         Open Strava API settings
         <ExternalLink className="h-3.5 w-3.5" />
@@ -465,7 +465,7 @@ function SaveStep({
         </p>
         <a
           href="/"
-          className="inline-flex items-center gap-2 rounded-full bg-strava px-4 py-2 text-sm font-semibold text-white shadow-md shadow-strava/30 transition-all hover:scale-[1.02]"
+          className="inline-flex items-center gap-2 rounded-full bg-strava px-4 py-2 text-sm font-semibold !text-white shadow-md shadow-strava/30 transition-all hover:scale-[1.02]"
         >
           Reload
           <ArrowRight className="h-3.5 w-3.5" />

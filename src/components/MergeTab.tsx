@@ -862,7 +862,7 @@ export default function MergeTab({
                             href={`https://www.strava.com/activities/${s.activity.id}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 truncate hover:text-strava hover:underline"
+                            className="inline-flex items-center gap-1 truncate ![color:inherit] hover:!text-strava hover:underline"
                           >
                             {s.name}
                             <ExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -1305,7 +1305,7 @@ function StepStatus({ step }: { step: Step }) {
         href={`https://www.strava.com/activities/${step.activityId}`}
         target="_blank"
         rel="noreferrer"
-        className="inline-flex items-center gap-1 text-sm font-medium text-emerald-600 hover:underline dark:text-emerald-400"
+        className="inline-flex items-center gap-1 text-sm font-medium !text-emerald-600 hover:underline dark:!text-emerald-400"
       >
         Open new activity
         <ExternalLink className="h-3.5 w-3.5" />

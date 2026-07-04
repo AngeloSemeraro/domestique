@@ -44,7 +44,7 @@ export default function Footer() {
                 href={c.url}
                 target="_blank"
                 rel="noreferrer"
-                className="hover:text-strava hover:underline"
+                className="![color:inherit] hover:!text-strava hover:underline"
               >
                 {c.name}
               </a>

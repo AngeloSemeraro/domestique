@@ -1015,7 +1015,7 @@ function NameCell({
         href={`https://www.strava.com/activities/${activity.id}`}
         target="_blank"
         rel="noreferrer"
-        className="font-medium hover:text-strava hover:underline"
+        className="font-medium ![color:inherit] hover:!text-strava hover:underline"
       >
         {activity.name}
       </a>
