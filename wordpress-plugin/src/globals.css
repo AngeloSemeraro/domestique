@@ -41,3 +41,59 @@
   font-size: 0.875rem;
   margin: 0;
 }
+
+/* Inspector map (Leaflet) — mirrors the Next.js app's globals.css rules */
+.sbe-mount .sbe-map {
+  isolation: isolate;
+  z-index: 0;
+}
+
+.sbe-mount .sbe-map .leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-input);
+  font: inherit;
+}
+
+.sbe-mount .sbe-map .leaflet-control-attribution {
+  font-size: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .sbe-mount .sbe-map .sbe-basemap {
+    filter: brightness(0.75) contrast(1.05) saturate(0.8);
+  }
+
+  .sbe-mount .sbe-map .leaflet-control-attribution {
+    background: rgba(19, 19, 22, 0.75);
+    color: var(--fg-muted);
+  }
+
+  .sbe-mount .sbe-map .leaflet-control-attribution a {
+    color: var(--fg);
+  }
+
+  .sbe-mount .sbe-map .leaflet-control-zoom a {
+    background: var(--bg-elev);
+    color: var(--fg);
+    border-color: var(--border);
+  }
+
+  .sbe-mount .sbe-map .leaflet-control-scale-line {
+    background: rgba(19, 19, 22, 0.6);
+    color: var(--fg);
+    border-color: var(--fg-muted);
+  }
+
+  .sbe-mount .sbe-map .leaflet-popup-content-wrapper,
+  .sbe-mount .sbe-map .leaflet-popup-tip {
+    background: var(--bg-elev);
+    color: var(--fg);
+  }
+
+  .sbe-mount .sbe-map .leaflet-tooltip {
+    background: var(--bg-elev);
+    color: var(--fg);
+    border-color: var(--border);
+  }
+}

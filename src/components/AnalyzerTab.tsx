@@ -30,6 +30,8 @@ import {
   type StreamedActivity,
 } from "@/lib/gpx";
 import { parseTrackFile, type ParsedTrack } from "@/lib/file-parsers";
+import ElevationProfile from "./ElevationProfile";
+import TrackMap from "./TrackMapLazy";
 
 type Step =
   | { kind: "idle" }
@@ -66,6 +68,11 @@ export default function AnalyzerTab({
   const [step, setStep] = useState<Step>({ kind: "idle" });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  // Shared hover / zoom state mirrored between the map, the elevation
+  // profile and the stream charts. viewRange null = full track.
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const [viewRange, setViewRange] = useState<[number, number] | null>(null);
+  const [showWaypoints, setShowWaypoints] = useState(true);
 
   useEffect(() => {
     if (seed) {
@@ -78,6 +85,8 @@ export default function AnalyzerTab({
       setName(seed.name);
       setParseError(null);
       setStep({ kind: "idle" });
+      setViewRange(null);
+      setHoverIdx(null);
       onConsumeSeed?.();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -92,6 +101,8 @@ export default function AnalyzerTab({
       const parsed = await parseTrackFile(f);
       setFile({ ...parsed, filename: f.name });
       setName(parsed.name);
+      setViewRange(null);
+      setHoverIdx(null);
     } catch (e) {
       setParseError(e instanceof Error ? e.message : "parse error");
       setFile(null);
@@ -124,6 +135,13 @@ export default function AnalyzerTab({
       avgCad: avgOf(s.cadence?.data),
     };
   }, [file, movement]);
+
+  // Memoized: recomputing haversines on every hover-driven render is wasteful.
+  const speedSeries = useMemo(
+    () =>
+      file ? computeSpeedSeries(file.streams, movement.maxJumpKm) : [],
+    [file, movement.maxJumpKm]
+  );
 
   async function publish(target: "strava" | "tcx" | "gpx") {
     if (!file) return;
@@ -195,6 +213,8 @@ export default function AnalyzerTab({
     setName("");
     setDescription("");
     setStep({ kind: "idle" });
+    setViewRange(null);
+    setHoverIdx(null);
   }
 
   const busy = step.kind === "uploading" || step.kind === "processing";
@@ -328,7 +348,77 @@ export default function AnalyzerTab({
                 train/car. Tighten Max km/h aggressively.
               </div>
             )}
+
+            {file.has_time === false && (
+              <div className="mt-3 rounded-lg border border-sky-500/30 bg-sky-500/5 p-2 text-xs text-sky-700 dark:text-sky-300">
+                <Info className="mr-1 inline h-3 w-3" />
+                This file has no timestamps — synthetic times (1 s per point)
+                were generated so charts, downloads and Strava upload still
+                work. Speed and duration are not meaningful.
+              </div>
+            )}
           </section>
+
+          {(analysis.hasGps || analysis.hasAlt) && (
+            <section className="animate-fade-in rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-4 md:p-5 shadow-sm">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-semibold tracking-tight">
+                  Map &amp; elevation
+                </h3>
+                {(file.waypoints?.length ?? 0) > 0 && (
+                  <label className="flex items-center gap-1.5 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={showWaypoints}
+                      onChange={(e) => setShowWaypoints(e.target.checked)}
+                      className="accent-strava"
+                    />
+                    Waypoints ({file.waypoints!.length})
+                  </label>
+                )}
+              </div>
+              {analysis.hasGps && (
+                <TrackMap
+                  latlng={file.streams.latlng?.data ?? []}
+                  runs={analysis.runs}
+                  waypoints={file.waypoints}
+                  showWaypoints={showWaypoints}
+                  hoverIdx={hoverIdx}
+                  viewRange={viewRange}
+                  onHover={setHoverIdx}
+                  className="h-72 md:h-96"
+                />
+              )}
+              {analysis.hasAlt ? (
+                <div className={analysis.hasGps ? "mt-4" : ""}>
+                  <ElevationProfile
+                    streams={file.streams}
+                    totalPoints={file.point_count}
+                    runs={analysis.runs}
+                    seamIndices={file.seamIndices}
+                    waypoints={file.waypoints}
+                    showWaypoints={showWaypoints}
+                    hoverIdx={hoverIdx}
+                    onHover={setHoverIdx}
+                    viewRange={viewRange ?? [0, file.point_count - 1]}
+                    onViewRangeChange={(r) =>
+                      setViewRange(
+                        r[0] <= 0 && r[1] >= file.point_count - 1 ? null : r
+                      )
+                    }
+                    maxJumpKm={movement.maxJumpKm}
+                    hasTime={file.has_time !== false}
+                  />
+                </div>
+              ) : (
+                <p className="mt-3 text-xs text-[color:var(--fg-muted)]">
+                  <Info className="mr-1 inline h-3 w-3" />
+                  No altitude data in this file — the elevation profile is
+                  unavailable.
+                </p>
+              )}
+            </section>
+          )}
 
           <section className="animate-fade-in rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-4 md:p-5 shadow-sm">
             <div className="mb-3 flex items-center justify-between gap-2">
@@ -498,10 +588,12 @@ export default function AnalyzerTab({
                 unit="km/h"
                 color="#fc4c02"
                 icon={<ActivityIcon className="h-3.5 w-3.5" />}
-                series={computeSpeedSeries(file.streams, movement.maxJumpKm)}
+                series={speedSeries}
                 runs={analysis.runs}
                 totalPoints={file.point_count}
                 seamIndices={file.seamIndices}
+                viewRange={viewRange}
+                hoverIdx={hoverIdx}
               />
               {analysis.hasHR && (
                 <StreamChart
@@ -515,6 +607,8 @@ export default function AnalyzerTab({
                   runs={analysis.runs}
                   totalPoints={file.point_count}
                   seamIndices={file.seamIndices}
+                  viewRange={viewRange}
+                  hoverIdx={hoverIdx}
                 />
               )}
               {analysis.hasCad && (
@@ -529,13 +623,8 @@ export default function AnalyzerTab({
                   runs={analysis.runs}
                   totalPoints={file.point_count}
                   seamIndices={file.seamIndices}
-                />
-              )}
-              {analysis.hasAlt && (
-                <ElevationChart
-                  streams={file.streams}
-                  totalPoints={file.point_count}
-                  seamIndices={file.seamIndices}
+                  viewRange={viewRange}
+                  hoverIdx={hoverIdx}
                 />
               )}
             </div>
@@ -543,7 +632,8 @@ export default function AnalyzerTab({
               <span className="inline-block h-2 w-3 rounded bg-strava align-middle"></span>{" "}
               kept ·{" "}
               <span className="inline-block h-2 w-3 rounded bg-[color:var(--fg-muted)]/30 align-middle"></span>{" "}
-              dropped · elevation profile colored by gradient
+              dropped
+              {viewRange && " · charts follow the elevation zoom window"}
             </p>
           </section>
 
@@ -706,278 +796,6 @@ function Stat({
   );
 }
 
-/**
- * Filled elevation profile colored by gradient (climb / flat / descent).
- * Each x-step gets its own colored vertical rect under the line so the
- * eye reads the steepness directly off the chart.
- */
-function ElevationChart({
-  streams,
-  totalPoints,
-  seamIndices,
-}: {
-  streams: Streams;
-  totalPoints: number;
-  seamIndices?: number[];
-}) {
-  const svgRef = useRef<SVGSVGElement | null>(null);
-  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-  const ll = streams.latlng?.data ?? [];
-  const alt = streams.altitude?.data ?? [];
-  if (alt.length === 0 || ll.length === 0) return null;
-
-  // Min/max from the full series for honest axis labels.
-  let aMin = Infinity;
-  let aMax = -Infinity;
-  for (const v of alt) {
-    if (typeof v === "number" && Number.isFinite(v)) {
-      if (v < aMin) aMin = v;
-      if (v > aMax) aMax = v;
-    }
-  }
-  if (!Number.isFinite(aMin) || !Number.isFinite(aMax)) return null;
-  const range = aMax - aMin || 1;
-
-  // Cumulative elevation gain / loss (full data).
-  let gain = 0;
-  let loss = 0;
-  for (let i = 1; i < alt.length; i++) {
-    const a = alt[i];
-    const b = alt[i - 1];
-    if (typeof a === "number" && typeof b === "number") {
-      const d = a - b;
-      if (d > 0) gain += d;
-      else loss -= d;
-    }
-  }
-
-  // Downsample for rendering.
-  const W = 1000;
-  const H = 100;
-  const target = 400;
-  const step = Math.max(1, Math.ceil(alt.length / target));
-
-  type Sample = { x: number; y: number; gradPct: number };
-  const samples: Sample[] = [];
-  for (let i = 0; i < alt.length; i += step) {
-    const v = alt[i];
-    if (typeof v !== "number" || !Number.isFinite(v)) continue;
-    const prevIdx = Math.max(0, i - step);
-    const prev = alt[prevIdx];
-    const dEle =
-      typeof prev === "number" && Number.isFinite(prev) ? v - prev : 0;
-    const dDist =
-      i > 0 && ll[i] && ll[prevIdx]
-        ? haversineKm(ll[prevIdx], ll[i]) * 1000
-        : 0;
-    const gradPct = dDist > 0 ? (dEle / dDist) * 100 : 0;
-    samples.push({ x: i, y: v, gradPct });
-  }
-  if (samples.length === 0) return null;
-
-  const xScale = (x: number) => (x / Math.max(1, totalPoints - 1)) * W;
-  const yScale = (y: number) => H - ((y - aMin) / range) * (H - 8) - 4;
-  const barWidth = W / Math.max(1, samples.length);
-
-  function gradColor(pct: number): string {
-    // Clamp to ±12%; map to a green→neutral→red ramp.
-    const x = Math.max(-12, Math.min(12, pct));
-    if (x >= 0) {
-      const t = Math.min(1, x / 8); // 0 flat → 1 at ~8%
-      // light green-grey (#cbd5e1) → red-orange (#ef4444)
-      return mix("#cbd5e1", "#ef4444", t);
-    }
-    const t = Math.min(1, -x / 8);
-    return mix("#cbd5e1", "#10b981", t);
-  }
-
-  // Build line path.
-  const linePath = samples
-    .map((s, i) => `${i === 0 ? "M" : "L"} ${xScale(s.x).toFixed(1)} ${yScale(s.y).toFixed(1)}`)
-    .join(" ");
-
-  return (
-    <div>
-      <div className="mb-1 flex items-center justify-between text-xs">
-        <span
-          className="inline-flex items-center gap-1.5 font-medium"
-          style={{ color: "#0ea5e9" }}
-        >
-          <MountainIcon />
-          Elevation
-        </span>
-        <span className="font-mono text-[color:var(--fg-muted)]">
-          {Math.round(aMin)} – {Math.round(aMax)} m · ↑{Math.round(gain)} ↓
-          {Math.round(loss)} m
-        </span>
-      </div>
-      <div className="relative">
-        <svg
-          ref={svgRef}
-          viewBox={`0 0 ${W} ${H}`}
-          preserveAspectRatio="none"
-          className="block h-20 w-full rounded bg-[color:var(--bg-input)] touch-none"
-          onPointerMove={(e) => {
-            const svg = svgRef.current;
-            if (!svg) return;
-            const rect = svg.getBoundingClientRect();
-            const xPx = e.clientX - rect.left;
-            const frac = Math.max(0, Math.min(1, xPx / rect.width));
-            let best = 0;
-            let bestDist = Infinity;
-            for (let i = 0; i < samples.length; i++) {
-              const d = Math.abs(samples[i].x / Math.max(1, totalPoints - 1) - frac);
-              if (d < bestDist) {
-                bestDist = d;
-                best = i;
-              }
-            }
-            setHoverIdx(best);
-          }}
-          onPointerLeave={() => setHoverIdx(null)}
-        >
-          {/* gradient-colored bars under the profile */}
-          {samples.map((s, i) => (
-            <rect
-              key={i}
-              x={xScale(s.x)}
-              y={yScale(s.y)}
-              width={barWidth + 0.5}
-              height={H - yScale(s.y)}
-              fill={gradColor(s.gradPct)}
-              opacity={0.85}
-            />
-          ))}
-          {/* outline line on top */}
-          <path
-            d={linePath}
-            fill="none"
-            stroke="#0ea5e9"
-            strokeWidth={1.2}
-            strokeOpacity={0.9}
-          />
-          {/* seam markers (dashed) */}
-          {(seamIndices ?? []).map((idx, i) => (
-            <line
-              key={`seam-${i}`}
-              x1={xScale(idx)}
-              x2={xScale(idx)}
-              y1={0}
-              y2={H}
-              stroke="currentColor"
-              strokeOpacity={0.55}
-              strokeWidth={1}
-              strokeDasharray="3 3"
-              className="text-[color:var(--fg-muted)]"
-              vectorEffect="non-scaling-stroke"
-            />
-          ))}
-          {/* hover vertical line */}
-          {hoverIdx !== null && samples[hoverIdx] && (
-            <line
-              x1={xScale(samples[hoverIdx].x)}
-              x2={xScale(samples[hoverIdx].x)}
-              y1={0}
-              y2={H}
-              stroke="#0ea5e9"
-              strokeWidth={1}
-              vectorEffect="non-scaling-stroke"
-            />
-          )}
-        </svg>
-        {hoverIdx !== null && samples[hoverIdx] && (() => {
-          const s = samples[hoverIdx];
-          const leftPct = (s.x / Math.max(1, totalPoints - 1)) * 100;
-          const flip = leftPct > 70;
-          return (
-            <div
-              className="pointer-events-none absolute top-1 z-10 whitespace-nowrap rounded border border-[color:var(--border)] bg-[color:var(--bg-elev)] px-1.5 py-1 text-[10px] font-mono shadow-md"
-              style={{
-                left: `${leftPct}%`,
-                transform: flip ? "translateX(-100%) translateX(-4px)" : "translateX(4px)",
-              }}
-            >
-              <div>{Math.round(s.y)} m</div>
-              <div
-                style={{
-                  color:
-                    s.gradPct > 1
-                      ? "#ef4444"
-                      : s.gradPct < -1
-                      ? "#10b981"
-                      : "var(--fg-muted)",
-                }}
-              >
-                {s.gradPct >= 0 ? "+" : ""}
-                {s.gradPct.toFixed(1)}%
-              </div>
-            </div>
-          );
-        })()}
-      </div>
-      <div className="mt-1 flex items-center gap-2 text-[10px] text-[color:var(--fg-muted)]">
-        <span className="inline-flex items-center gap-1">
-          <span
-            className="inline-block h-2 w-3 rounded"
-            style={{ background: "#10b981" }}
-          ></span>
-          descent
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <span
-            className="inline-block h-2 w-3 rounded"
-            style={{ background: "#cbd5e1" }}
-          ></span>
-          flat
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <span
-            className="inline-block h-2 w-3 rounded"
-            style={{ background: "#ef4444" }}
-          ></span>
-          climb
-        </span>
-        <span className="ml-auto opacity-70">color intensity ∝ gradient %</span>
-      </div>
-    </div>
-  );
-}
-
-function MountainIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m8 3 4 8 5-5 5 15H2L8 3z" />
-    </svg>
-  );
-}
-
-function mix(a: string, b: string, t: number): string {
-  const pa = parseHex(a);
-  const pb = parseHex(b);
-  const r = Math.round(pa[0] + (pb[0] - pa[0]) * t);
-  const g = Math.round(pa[1] + (pb[1] - pa[1]) * t);
-  const bl = Math.round(pa[2] + (pb[2] - pa[2]) * t);
-  return `rgb(${r}, ${g}, ${bl})`;
-}
-
-function parseHex(hex: string): [number, number, number] {
-  const h = hex.replace("#", "");
-  return [
-    parseInt(h.slice(0, 2), 16),
-    parseInt(h.slice(2, 4), 16),
-    parseInt(h.slice(4, 6), 16),
-  ];
-}
-
 function StreamChart({
   title,
   unit,
@@ -987,6 +805,8 @@ function StreamChart({
   runs,
   totalPoints,
   seamIndices,
+  viewRange,
+  hoverIdx,
 }: {
   title: string;
   unit: string;
@@ -996,23 +816,30 @@ function StreamChart({
   runs: Array<{ start: number; end: number }>;
   totalPoints: number;
   seamIndices?: number[];
+  /** Zoom window shared with the elevation profile; null = full track. */
+  viewRange?: [number, number] | null;
+  hoverIdx?: number | null;
 }) {
   const W = 1000;
   const H = 80;
   const targetSamples = 400;
-  const step = Math.max(1, Math.ceil(series.length / targetSamples));
+  const last = Math.max(0, Math.min(totalPoints, series.length) - 1);
+  const a = viewRange ? Math.max(0, Math.min(viewRange[0], last)) : 0;
+  const b = viewRange ? Math.max(a, Math.min(viewRange[1], last)) : last;
+  const step = Math.max(1, Math.ceil((b - a + 1) / targetSamples));
 
   const samples: Array<{ x: number; v: number | null; kept: boolean }> = [];
-  for (let i = 0; i < series.length; i += step) {
+  for (let i = a; i <= b; i += step) {
     const kept = isIndexKept(i, runs);
     samples.push({ x: i, v: series[i] ?? null, kept });
   }
-  // Compute min/max from the full series (not the downsampled one) so the
-  // header label reflects the real range, including spikes the chart
-  // sampling might skip.
+  // Compute min/max from the full-resolution visible window (not the
+  // downsampled samples) so the header label reflects the real range,
+  // including spikes the chart sampling might skip.
   let min = Infinity;
   let max = -Infinity;
-  for (const v of series) {
+  for (let i = a; i <= b; i++) {
+    const v = series[i];
     if (typeof v === "number" && Number.isFinite(v)) {
       if (v < min) min = v;
       if (v > max) max = v;
@@ -1020,7 +847,7 @@ function StreamChart({
   }
   if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
   const range = max - min || 1;
-  const xScale = (x: number) => (x / Math.max(1, totalPoints - 1)) * W;
+  const xScale = (x: number) => ((x - a) / Math.max(1, b - a)) * W;
   const yScale = (v: number) => H - ((v - min) / range) * H;
 
   // Build path segments separated by kept/dropped boundaries
@@ -1071,21 +898,35 @@ function StreamChart({
             className={s.kept ? "" : "text-[color:var(--fg-muted)]"}
           />
         ))}
-        {(seamIndices ?? []).map((idx, i) => (
+        {(seamIndices ?? [])
+          .filter((idx) => idx >= a && idx <= b)
+          .map((idx, i) => (
+            <line
+              key={`seam-${i}`}
+              x1={xScale(idx)}
+              x2={xScale(idx)}
+              y1={0}
+              y2={H}
+              stroke="currentColor"
+              strokeOpacity={0.55}
+              strokeWidth={1}
+              strokeDasharray="3 3"
+              className="text-[color:var(--fg-muted)]"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+        {typeof hoverIdx === "number" && hoverIdx >= a && hoverIdx <= b && (
           <line
-            key={`seam-${i}`}
-            x1={xScale(idx)}
-            x2={xScale(idx)}
+            x1={xScale(hoverIdx)}
+            x2={xScale(hoverIdx)}
             y1={0}
             y2={H}
-            stroke="currentColor"
-            strokeOpacity={0.55}
+            stroke="#0ea5e9"
             strokeWidth={1}
-            strokeDasharray="3 3"
-            className="text-[color:var(--fg-muted)]"
+            strokeOpacity={0.8}
             vectorEffect="non-scaling-stroke"
           />
-        ))}
+        )}
       </svg>
     </div>
   );

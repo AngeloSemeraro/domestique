@@ -51,6 +51,8 @@ src/
     Editor.tsx               # Batch edit tab
     MergeTab.tsx             # Merge rides tab
     AnalyzerTab.tsx          # Inspector tab
+    TrackMap.tsx             # Inspector's Leaflet map (+ TrackMapLazy.tsx loader)
+    ElevationProfile.tsx     # gradient-colored, zoomable elevation view
     OnboardingWizard.tsx     # 4-step setup
     ...
   lib/

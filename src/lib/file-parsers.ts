@@ -1,11 +1,25 @@
 import FitParser from "fit-file-parser";
 import type { Streams } from "./gpx";
 
+export type Waypoint = {
+  lat: number;
+  lon: number;
+  name?: string;
+  desc?: string;
+  sym?: string;
+  ele?: number;
+};
+
 export type ParsedTrack = {
   name: string;
   start_date: string;
   streams: Streams;
   point_count: number;
+  /** Standalone points of interest: <wpt> in GPX, course points in FIT. */
+  waypoints?: Waypoint[];
+  /** False when the file carried no timestamps and 1 s/point times were
+   *  synthesized so charts, exports and uploads still work. */
+  has_time?: boolean;
 };
 
 /** Parse a GPX file (XML) in the browser. Picks the first <trk>. */
@@ -27,16 +41,22 @@ export async function parseGpxFile(file: File): Promise<ParsedTrack> {
   const cadence: Array<number | undefined> = [];
   const temperature: Array<number | undefined> = [];
 
-  const firstTimeStr = trkpts[0].getElementsByTagName("time")[0]?.textContent;
-  if (!firstTimeStr) {
-    throw new Error(
-      `${file.name}: <trkpt> has no <time>; can't determine start.`
-    );
+  // Base time comes from the first <trkpt> with a parsable <time>. Files
+  // without any timestamps (route exports, drawn tracks) fall back to the
+  // file's mtime with synthetic 1 s/point offsets instead of failing.
+  let baseMs = NaN;
+  for (const p of trkpts) {
+    const t = p.getElementsByTagName("time")[0]?.textContent;
+    if (t) {
+      const ms = +new Date(t);
+      if (!Number.isNaN(ms)) {
+        baseMs = ms;
+        break;
+      }
+    }
   }
-  const baseMs = +new Date(firstTimeStr);
-  if (Number.isNaN(baseMs)) {
-    throw new Error(`${file.name}: invalid first <time> "${firstTimeStr}"`);
-  }
+  const hasTime = !Number.isNaN(baseMs);
+  if (!hasTime) baseMs = file.lastModified || Date.now();
 
   for (const p of trkpts) {
     const lat = parseFloat(p.getAttribute("lat") ?? "");
@@ -67,6 +87,23 @@ export async function parseGpxFile(file: File): Promise<ParsedTrack> {
     temperature.push(atemp ? parseFloat(atemp) : undefined);
   }
 
+  const waypoints: Waypoint[] = [];
+  for (const w of Array.from(doc.getElementsByTagName("wpt"))) {
+    const lat = parseFloat(w.getAttribute("lat") ?? "");
+    const lon = parseFloat(w.getAttribute("lon") ?? "");
+    if (Number.isNaN(lat) || Number.isNaN(lon)) continue;
+    const eleStr = w.getElementsByTagName("ele")[0]?.textContent;
+    const ele = eleStr ? parseFloat(eleStr) : NaN;
+    waypoints.push({
+      lat,
+      lon,
+      name: w.getElementsByTagName("name")[0]?.textContent?.trim() || undefined,
+      desc: w.getElementsByTagName("desc")[0]?.textContent?.trim() || undefined,
+      sym: w.getElementsByTagName("sym")[0]?.textContent?.trim() || undefined,
+      ...(Number.isFinite(ele) ? { ele } : {}),
+    });
+  }
+
   const trackName =
     doc.querySelector("trk > name")?.textContent?.trim() ||
     file.name.replace(/\.gpx$/i, "");
@@ -83,6 +120,8 @@ export async function parseGpxFile(file: File): Promise<ParsedTrack> {
       ...(temperature.some((v) => v !== undefined) ? { temperature: { data: temperature } } : {}),
     },
     point_count: latlng.length,
+    ...(waypoints.length > 0 ? { waypoints } : {}),
+    has_time: hasTime,
   };
 }
 
@@ -97,6 +136,13 @@ type FitRecord = {
   temperature?: number;
 };
 
+type FitCoursePoint = {
+  position_lat?: number;
+  position_long?: number;
+  name?: string;
+  type?: string;
+};
+
 /** Parse a FIT file in the browser using fit-file-parser. */
 export async function parseFitFile(file: File): Promise<ParsedTrack> {
   const buf = await file.arrayBuffer();
@@ -108,21 +154,28 @@ export async function parseFitFile(file: File): Promise<ParsedTrack> {
     elapsedRecordField: false,
     mode: "list",
   });
-  const data: { records?: FitRecord[]; activity?: unknown } =
-    await parser.parseAsync(buf);
+  const data: {
+    records?: FitRecord[];
+    course_points?: FitCoursePoint[];
+    activity?: unknown;
+  } = await parser.parseAsync(buf);
 
   const records: FitRecord[] = data.records ?? [];
   const withGps = records.filter(
     (r) =>
-      typeof r.position_lat === "number" &&
-      typeof r.position_long === "number" &&
-      r.timestamp
+      typeof r.position_lat === "number" && typeof r.position_long === "number"
   );
   if (withGps.length === 0) {
     throw new Error(`${file.name}: no GPS-bearing records found in FIT`);
   }
 
-  const baseMs = +new Date(withGps[0].timestamp as Date | string);
+  // FIT courses exported without timestamps get synthetic 1 s/point times,
+  // same fallback as GPX.
+  const firstTs = withGps.find((r) => r.timestamp)?.timestamp;
+  const firstMs = firstTs ? +new Date(firstTs) : NaN;
+  const hasTime = !Number.isNaN(firstMs);
+  const baseMs = hasTime ? firstMs : file.lastModified || Date.now();
+
   const latlng: Array<[number, number]> = [];
   const time: number[] = [];
   const altitude: Array<number | undefined> = [];
@@ -132,13 +185,26 @@ export async function parseFitFile(file: File): Promise<ParsedTrack> {
 
   for (const r of withGps) {
     latlng.push([r.position_lat as number, r.position_long as number]);
-    const ms = +new Date(r.timestamp as Date | string);
-    time.push(Math.round((ms - baseMs) / 1000));
+    const ms = r.timestamp ? +new Date(r.timestamp) : NaN;
+    time.push(Number.isNaN(ms) ? time.length : Math.round((ms - baseMs) / 1000));
     altitude.push(r.enhanced_altitude ?? r.altitude);
     heartrate.push(r.heart_rate);
     cadence.push(r.cadence);
     temperature.push(r.temperature);
   }
+
+  const waypoints: Waypoint[] = (data.course_points ?? [])
+    .filter(
+      (c) =>
+        typeof c.position_lat === "number" &&
+        typeof c.position_long === "number"
+    )
+    .map((c) => ({
+      lat: c.position_lat as number,
+      lon: c.position_long as number,
+      name: c.name || undefined,
+      sym: c.type || undefined,
+    }));
 
   return {
     name: file.name.replace(/\.fit$/i, ""),
@@ -152,6 +218,8 @@ export async function parseFitFile(file: File): Promise<ParsedTrack> {
       ...(temperature.some((v) => v !== undefined) ? { temperature: { data: temperature } } : {}),
     },
     point_count: latlng.length,
+    ...(waypoints.length > 0 ? { waypoints } : {}),
+    has_time: hasTime,
   };
 }
 
