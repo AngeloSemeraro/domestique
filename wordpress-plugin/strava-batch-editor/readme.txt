@@ -4,7 +4,7 @@ Tags: strava, cycling, gpx, tcx, fit, batch edit, merge
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -18,7 +18,7 @@ Three tools in one:
 
 * **Batch edit** — rename, change sport type, gear, hide-from-feed, trainer, commute on many activities at once.
 * **Merge rides** — combine multiple rides (Strava activities and/or local `.gpx` / `.fit` files) into one new activity, with movement filtering that drops train/car stretches.
-* **Inspector** — load a single `.gpx` / `.fit`, tune the movement filter live with kept/dropped charts, then publish or download.
+* **Inspector** — load a single `.gpx` / `.fit` and explore it on an interactive map with togglable waypoints, plus a detailed elevation profile colored by gradient (Wahoo ELEMNT-style bands). Hover is mirrored between the profile and the map; drag a range (or scroll) on the profile to zoom in, audio-editor style, and the map follows. Tune the movement filter live with kept/dropped charts, then publish or download. Files without timestamps (route exports) load fine — times are synthesized automatically.
 
 Outputs both **TCX** (recommended for Strava — carries the real distance odometer that skips unrecorded transfers) and **GPX**.
 
@@ -46,6 +46,7 @@ This plugin calls the following external services on behalf of the logged-in use
 
 * **Strava API** (`https://www.strava.com/api/v3/*`, `https://www.strava.com/oauth/*`) — to read and write the user's own activities. Required. [Terms](https://www.strava.com/legal/api). [Privacy](https://www.strava.com/legal/privacy).
 * **Nominatim / OpenStreetMap** (`https://nominatim.openstreetmap.org/reverse`) — to look up the country/city of activities whose location wasn't recorded. Sends only the start latitude/longitude. [Usage policy](https://operations.osmfoundation.org/policies/nominatim/).
+* **OpenStreetMap tile server** (`https://tile.openstreetmap.org/*`) — the Inspector's interactive map loads its background tiles from here, directly from the visitor's browser. The tile server sees the map area being viewed (as tile coordinates) and the visitor's IP, like any embedded map. [Tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
 
 == Installation ==
 
@@ -85,10 +86,20 @@ Not affiliated with Strava, Inc.
 
 == Changelog ==
 
+= 0.2.0 =
+* Inspector: interactive map (Leaflet + OpenStreetMap) with the track, start/end markers and togglable waypoints (GPX `<wpt>` / FIT course points).
+* Inspector: detailed elevation profile colored by gradient using Wahoo ELEMNT-style bands (green 0-4%, yellow 4-8%, orange 8-12%, red 12-20%, brown 20%+).
+* Inspector: hover on the elevation profile (or the map) shows distance / altitude / grade / elapsed time and is mirrored on the other view.
+* Inspector: drag a range on the elevation profile to zoom into it, scroll to zoom, double-click to reset, drag the overview strip to pan — the map and the speed/HR/cadence charts follow the zoom window.
+* Fixed: GPX/FIT files without timestamps (e.g. route exports) no longer fail to load — times are synthesized (1 s per point) so charts, downloads and Strava upload work.
+
 = 0.1.0 =
 * Initial release: OAuth, settings page, REST proxy, shortcodes, React bundle.
 
 == Upgrade Notice ==
+
+= 0.2.0 =
+Inspector gets an interactive map and a gradient-colored, zoomable elevation profile; GPX files without timestamps now load. Rebuild the React bundle (`cd wordpress-plugin && npm install && npm run build`) when updating from source.
 
 = 0.1.0 =
 First release.

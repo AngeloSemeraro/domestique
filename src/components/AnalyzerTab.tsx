@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import dynamic from "next/dynamic";
 import { apiFetch } from "@/lib/api";
 import {
   AlertCircle,
@@ -32,14 +31,7 @@ import {
 } from "@/lib/gpx";
 import { parseTrackFile, type ParsedTrack } from "@/lib/file-parsers";
 import ElevationProfile from "./ElevationProfile";
-
-// Leaflet touches `window` at import time, so the map must skip SSR.
-const TrackMap = dynamic(() => import("./TrackMap"), {
-  ssr: false,
-  loading: () => (
-    <div className="h-72 w-full animate-pulse rounded-xl border border-[color:var(--border)] bg-[color:var(--bg-input)] md:h-96" />
-  ),
-});
+import TrackMap from "./TrackMapLazy";
 
 type Step =
   | { kind: "idle" }

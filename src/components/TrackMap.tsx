@@ -7,6 +7,19 @@ import type { Waypoint } from "@/lib/file-parsers";
 
 type Run = { start: number; end: number };
 
+export type TrackMapProps = {
+  latlng: Array<[number, number]>;
+  /** Kept segments from the movement filter; empty = everything kept. */
+  runs: Run[];
+  waypoints?: Waypoint[];
+  showWaypoints?: boolean;
+  hoverIdx: number | null;
+  /** Zoomed index window from the elevation profile; null = full track. */
+  viewRange: [number, number] | null;
+  onHover?: (idx: number | null) => void;
+  className?: string;
+};
+
 const TRACK_COLOR = "#fc4c02";
 const DROPPED_COLOR = "#6b7280";
 const WINDOW_COLOR = "#0ea5e9";
@@ -27,18 +40,7 @@ export default function TrackMap({
   viewRange,
   onHover,
   className,
-}: {
-  latlng: Array<[number, number]>;
-  /** Kept segments from the movement filter; empty = everything kept. */
-  runs: Run[];
-  waypoints?: Waypoint[];
-  showWaypoints?: boolean;
-  hoverIdx: number | null;
-  /** Zoomed index window from the elevation profile; null = full track. */
-  viewRange: [number, number] | null;
-  onHover?: (idx: number | null) => void;
-  className?: string;
-}) {
+}: TrackMapProps) {
   const divRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const trackLayerRef = useRef<L.LayerGroup | null>(null);

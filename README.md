@@ -42,9 +42,25 @@ Combine multiple rides into one new activity:
 
 ### 🔍 Inspector
 Drop a single `.gpx` / `.fit` (or send the merge result here) to:
+- **explore the track on an interactive map** (OpenStreetMap) with start/end
+  markers, filter-dropped segments dashed, and **togglable waypoints** (GPX
+  `<wpt>` / FIT course points)
+- read a **detailed elevation profile colored by gradient**, using the same
+  bands as a Wahoo ELEMNT head unit: green 0–4%, yellow 4–8%, orange 8–12%,
+  red 12–20%, brown 20%+ (grey/blue for descents)
+- **hover** the profile to see distance, altitude, grade % and elapsed time —
+  the position is mirrored live on the map, and hovering the track on the map
+  mirrors back onto the charts
+- **zoom like an audio editor**: drag a range on the elevation profile (or
+  scroll) to zoom into it, double-click to reset, drag the overview strip to
+  pan — the map and the speed / HR / cadence charts all follow the zoom window
 - see which sensors it has (GPS / HR / cadence / altitude) and their averages
 - tune the movement filter live with kept/dropped charts for speed, HR, cadence
 - download the cleaned file or publish it to Strava
+
+Files **without timestamps** (route exports, drawn tracks) load fine: times
+are synthesized (1 s per point) so charts, downloads and Strava upload still
+work — the Inspector shows a notice when that happened.
 
 > **Why TCX for uploads?** A GPX file has no distance field, so Strava recomputes
 > distance by summing GPS points — which inflates the total when two source rides
@@ -162,7 +178,8 @@ Strava's public API has **no delete endpoint** and **no native merge**. So:
 ## Tech
 
 Next.js (App Router) · React · TypeScript · Tailwind CSS · Geist · lucide-react ·
-react-day-picker · iron-session · fit-file-parser · OpenStreetMap/Nominatim
+react-day-picker · iron-session · fit-file-parser · Leaflet +
+OpenStreetMap (Inspector map + tiles) · OpenStreetMap/Nominatim
 (reverse geocoding). See [CONTRIBUTING.md](CONTRIBUTING.md) for the project
 layout and how to help.
 
