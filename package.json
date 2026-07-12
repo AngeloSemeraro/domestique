@@ -13,6 +13,7 @@
   "dependencies": {
     "@types/leaflet": "^1.9.21",
     "date-fns": "^4.4.0",
+    "fflate": "^0.8.3",
     "fit-file-parser": "^3.0.2",
     "geist": "^1.7.2",
     "iron-session": "^8.0.4",

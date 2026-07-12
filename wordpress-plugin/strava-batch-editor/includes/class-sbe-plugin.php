@@ -25,6 +25,7 @@ final class SBE_Plugin {
 
 		SBE_Admin::instance()->register();
 		SBE_OAuth::instance()->register();
+		SBE_RWGPS::instance()->register();
 		SBE_REST::instance()->register();
 		SBE_Shortcode::instance()->register();
 	}
@@ -57,15 +58,19 @@ final class SBE_Plugin {
 	}
 
 	/**
-	 * Returns the saved settings (Client ID / Secret) with defaults.
+	 * Returns the saved settings (Strava + optional RideWithGPS credentials)
+	 * with defaults.
 	 *
-	 * @return array{client_id:string,client_secret:string}
+	 * @return array{client_id:string,client_secret:string,rwgps_client_id:string,rwgps_client_secret:string,rwgps_api_key:string}
 	 */
 	public static function get_settings(): array {
 		$opts = get_option( SBE_OPTION_KEY, array() );
 		return array(
-			'client_id'     => isset( $opts['client_id'] ) ? (string) $opts['client_id'] : '',
-			'client_secret' => isset( $opts['client_secret'] ) ? (string) $opts['client_secret'] : '',
+			'client_id'           => isset( $opts['client_id'] ) ? (string) $opts['client_id'] : '',
+			'client_secret'       => isset( $opts['client_secret'] ) ? (string) $opts['client_secret'] : '',
+			'rwgps_client_id'     => isset( $opts['rwgps_client_id'] ) ? (string) $opts['rwgps_client_id'] : '',
+			'rwgps_client_secret' => isset( $opts['rwgps_client_secret'] ) ? (string) $opts['rwgps_client_secret'] : '',
+			'rwgps_api_key'       => isset( $opts['rwgps_api_key'] ) ? (string) $opts['rwgps_api_key'] : '',
 		);
 	}
 

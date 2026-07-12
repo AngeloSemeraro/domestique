@@ -22,6 +22,8 @@ declare global {
       meUrl: string;
       iconUrl: string;
       version: string;
+      /** Present when the WP admin configured the RideWithGPS API client. */
+      rwgpsLoginUrl?: string;
     };
   }
 }
@@ -62,6 +64,11 @@ export function apiFetch(input: string, init: RequestInit = {}): Promise<Respons
 /** URL for the `<a href>` that starts the OAuth flow. */
 export function loginHref(): string {
   return bootstrap()?.loginUrl ?? "/api/auth/login";
+}
+
+/** URL that starts the RideWithGPS OAuth flow (browser navigation). */
+export function rwgpsLoginHref(): string {
+  return bootstrap()?.rwgpsLoginUrl ?? "/api/rwgps/auth/login";
 }
 
 /** Where the AppShell's logo image is served from. */

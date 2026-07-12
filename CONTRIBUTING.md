@@ -59,6 +59,8 @@ src/
     strava.ts                # Strava API client + token refresh
     gpx.ts                   # merge planning, GPX + TCX builders, filters
     file-parsers.ts          # browser-side GPX + FIT parsing
+    export-client.ts         # batch GPX export helpers (zip, RWGPS payloads)
+    rwgps.ts                 # server-side RideWithGPS OAuth + trip upload
     session.ts               # iron-session config
     onboarding.ts            # env-var checks
 ```

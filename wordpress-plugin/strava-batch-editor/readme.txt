@@ -4,7 +4,7 @@ Tags: strava, cycling, gpx, tcx, fit, batch edit, merge
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 0.2.0
+Stable tag: 0.3.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -16,7 +16,7 @@ Strava Batch Editor brings the open-source [Strava Batch Editor](https://github.
 
 Three tools in one:
 
-* **Batch edit** — rename, change sport type, gear, hide-from-feed, trainer, commute on many activities at once.
+* **Batch edit** — rename, change sport type, gear, hide-from-feed, trainer, commute on many activities at once. Plus **batch export**: send the selected activities to your **RideWithGPS** library (optional OAuth integration) or download them all as a **GPX zip** — handy for importing into Komoot, which has no public upload API, via its multi-file upload page.
 * **Merge rides** — combine multiple rides (Strava activities and/or local `.gpx` / `.fit` files) into one new activity, with movement filtering that drops train/car stretches.
 * **Inspector** — load a single `.gpx` / `.fit` and explore it on an interactive map with togglable waypoints, plus a detailed elevation profile colored by gradient (Wahoo ELEMNT-style bands). Hover is mirrored between the profile and the map; drag a range (or scroll) on the profile to zoom in, audio-editor style, and the map follows. Tune the movement filter live with kept/dropped charts, then publish or download. Files without timestamps (route exports) load fine — times are synthesized automatically.
 
@@ -47,6 +47,7 @@ This plugin calls the following external services on behalf of the logged-in use
 * **Strava API** (`https://www.strava.com/api/v3/*`, `https://www.strava.com/oauth/*`) — to read and write the user's own activities. Required. [Terms](https://www.strava.com/legal/api). [Privacy](https://www.strava.com/legal/privacy).
 * **Nominatim / OpenStreetMap** (`https://nominatim.openstreetmap.org/reverse`) — to look up the country/city of activities whose location wasn't recorded. Sends only the start latitude/longitude. [Usage policy](https://operations.osmfoundation.org/policies/nominatim/).
 * **OpenStreetMap tile server** (`https://tile.openstreetmap.org/*`) — the Inspector's interactive map loads its background tiles from here, directly from the visitor's browser. The tile server sees the map area being viewed (as tile coordinates) and the visitor's IP, like any embedded map. [Tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
+* **RideWithGPS API** (`https://ridewithgps.com/oauth/*`, `https://ridewithgps.com/api/v1/*`, `https://ridewithgps.com/trips.json`) — only when the administrator configures the optional RideWithGPS integration and a user connects their own RideWithGPS account. Used to upload the user's selected activities as trips to their own RideWithGPS library. [Terms](https://ridewithgps.com/terms). [Privacy](https://ridewithgps.com/privacy).
 
 == Installation ==
 
@@ -84,7 +85,16 @@ Provided **as is**, with no warranty of any kind (see GPLv3 sections 15-16 for t
 
 Not affiliated with Strava, Inc.
 
+= Can it upload to Komoot too? =
+
+No — Komoot has no public API and third-party integrations require a partner agreement with them, so direct upload isn't possible without breaking their terms. Instead, use **Download GPX (zip)** in the Batch edit tab and drop all the files onto komoot.com/upload in one go.
+
 == Changelog ==
+
+= 0.3.0 =
+* Batch edit tab: new "Send / export" section — export selected activities as GPX exactly as recorded.
+* Optional RideWithGPS integration: each user connects their own RideWithGPS account (OAuth) and uploads selected activities to their library in batch. Admin configures the API client in Settings → Strava Batch Editor.
+* Batch "Download GPX (zip)": all selected activities in one zip, for manual import into Komoot (no public API) or anywhere else.
 
 = 0.2.0 =
 * Inspector: interactive map (Leaflet + OpenStreetMap) with the track, start/end markers and togglable waypoints (GPX `<wpt>` / FIT course points).
@@ -97,6 +107,9 @@ Not affiliated with Strava, Inc.
 * Initial release: OAuth, settings page, REST proxy, shortcodes, React bundle.
 
 == Upgrade Notice ==
+
+= 0.3.0 =
+Batch edit gets "Send / export": batch upload to RideWithGPS (optional, per-user OAuth) and batch GPX zip download. Rebuild the React bundle when updating from source.
 
 = 0.2.0 =
 Inspector gets an interactive map and a gradient-colored, zoomable elevation profile; GPX files without timestamps now load. Rebuild the React bundle (`cd wordpress-plugin && npm install && npm run build`) when updating from source.

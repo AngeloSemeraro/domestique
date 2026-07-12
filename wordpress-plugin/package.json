@@ -9,6 +9,7 @@
     "build": "vite build"
   },
   "dependencies": {
+    "fflate": "^0.8.3",
     "fit-file-parser": "^3.0.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.21.0",

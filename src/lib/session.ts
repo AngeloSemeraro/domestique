@@ -7,6 +7,9 @@ export type StravaSession = {
   accessToken?: string;
   refreshToken?: string;
   expiresAt?: number;
+  /** RideWithGPS OAuth token (optional integration). */
+  rwgpsAccessToken?: string;
+  rwgpsUserName?: string;
 };
 
 const secret = process.env.SESSION_SECRET ?? "";

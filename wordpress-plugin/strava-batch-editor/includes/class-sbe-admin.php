@@ -47,8 +47,11 @@ final class SBE_Admin {
 	public function sanitize( $input ): array {
 		$out = array();
 		if ( is_array( $input ) ) {
-			$out['client_id']     = isset( $input['client_id'] ) ? sanitize_text_field( $input['client_id'] ) : '';
-			$out['client_secret'] = isset( $input['client_secret'] ) ? sanitize_text_field( $input['client_secret'] ) : '';
+			$out['client_id']           = isset( $input['client_id'] ) ? sanitize_text_field( $input['client_id'] ) : '';
+			$out['client_secret']       = isset( $input['client_secret'] ) ? sanitize_text_field( $input['client_secret'] ) : '';
+			$out['rwgps_client_id']     = isset( $input['rwgps_client_id'] ) ? sanitize_text_field( $input['rwgps_client_id'] ) : '';
+			$out['rwgps_client_secret'] = isset( $input['rwgps_client_secret'] ) ? sanitize_text_field( $input['rwgps_client_secret'] ) : '';
+			$out['rwgps_api_key']       = isset( $input['rwgps_api_key'] ) ? sanitize_text_field( $input['rwgps_api_key'] ) : '';
 		}
 		return $out;
 	}
@@ -123,6 +126,63 @@ final class SBE_Admin {
 								/>
 								<p class="description">
 									<?php esc_html_e( 'Stored in the wp_options table and never sent anywhere except to Strava.', 'strava-batch-editor' ); ?>
+								</p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row" colspan="2" style="padding-bottom:0;">
+								<h2 style="margin:1em 0 0;"><?php esc_html_e( 'RideWithGPS (optional)', 'strava-batch-editor' ); ?></h2>
+								<p style="font-weight:normal;">
+									<?php esc_html_e( 'Enables "Send to RideWithGPS" in the Batch edit tab. Register a free API client on your RideWithGPS account (ridewithgps.com/api) and set its redirect URI to:', 'strava-batch-editor' ); ?>
+									<br><code><?php echo esc_html( SBE_RWGPS::redirect_uri() ); ?></code>
+								</p>
+							</th>
+						</tr>
+						<tr>
+							<th scope="row">
+								<label for="sbe_rwgps_client_id"><?php esc_html_e( 'RideWithGPS Client ID', 'strava-batch-editor' ); ?></label>
+							</th>
+							<td>
+								<input
+									type="text"
+									id="sbe_rwgps_client_id"
+									name="<?php echo esc_attr( SBE_OPTION_KEY ); ?>[rwgps_client_id]"
+									value="<?php echo esc_attr( $settings['rwgps_client_id'] ); ?>"
+									class="regular-text code"
+									autocomplete="off"
+								/>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row">
+								<label for="sbe_rwgps_client_secret"><?php esc_html_e( 'RideWithGPS Client Secret', 'strava-batch-editor' ); ?></label>
+							</th>
+							<td>
+								<input
+									type="password"
+									id="sbe_rwgps_client_secret"
+									name="<?php echo esc_attr( SBE_OPTION_KEY ); ?>[rwgps_client_secret]"
+									value="<?php echo esc_attr( $settings['rwgps_client_secret'] ); ?>"
+									class="regular-text code"
+									autocomplete="off"
+								/>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row">
+								<label for="sbe_rwgps_api_key"><?php esc_html_e( 'RideWithGPS API key', 'strava-batch-editor' ); ?></label>
+							</th>
+							<td>
+								<input
+									type="text"
+									id="sbe_rwgps_api_key"
+									name="<?php echo esc_attr( SBE_OPTION_KEY ); ?>[rwgps_api_key]"
+									value="<?php echo esc_attr( $settings['rwgps_api_key'] ); ?>"
+									class="regular-text code"
+									autocomplete="off"
+								/>
+								<p class="description">
+									<?php esc_html_e( 'Only needed when it differs from the Client ID — leave empty otherwise.', 'strava-batch-editor' ); ?>
 								</p>
 							</td>
 						</tr>

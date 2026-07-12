@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, rwgpsLoginHref } from "@/lib/api";
 import {
   Activity,
   Bike,
@@ -9,18 +9,27 @@ import {
   Calendar,
   Check,
   ChevronDown,
+  Download,
   Edit3,
+  ExternalLink,
   EyeOff,
   Filter as FilterIcon,
+  Link2,
   Loader2,
   MapPin,
   Pencil,
   RefreshCw,
   Search,
+  Send,
   Trophy,
   Wand2,
   X,
 } from "lucide-react";
+import {
+  downloadGpxZip,
+  fetchActivityGpx,
+  gpxFilename,
+} from "@/lib/export-client";
 import type { ActivityUpdate, StravaActivity, StravaGear } from "@/lib/strava";
 import { workoutTypeForSport, type WorkoutKind } from "@/lib/workout-types";
 import {
@@ -83,6 +92,21 @@ type BatchProgress = {
   errors: Array<{ id: number; error: string }>;
 };
 
+type RwgpsStatus = {
+  configured: boolean;
+  connected: boolean;
+  name: string | null;
+};
+
+type ExportProgress = {
+  kind: "rwgps" | "zip";
+  total: number;
+  done: number;
+  errors: Array<{ id: number; name: string; error: string }>;
+  /** Link to the last uploaded RWGPS trip, shown when the batch finishes. */
+  lastUrl?: string;
+};
+
 const PRESETS: { label: string; days: number | "ytd" | "all" }[] = [
   { label: "30d", days: 30 },
   { label: "90d", days: 90 },
@@ -122,6 +146,105 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
   const [geoProgress, setGeoProgress] = useState<{ done: number; total: number } | null>(null);
   const [stats, setStats] = useState<AthleteStats | null>(null);
   const geoAbortRef = useRef<(() => void) | null>(null);
+
+  const [rwgps, setRwgps] = useState<RwgpsStatus | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
+
+  async function refreshRwgps() {
+    try {
+      const res = await apiFetch("/api/rwgps/me");
+      if (!res.ok) throw new Error();
+      setRwgps((await res.json()) as RwgpsStatus);
+    } catch {
+      setRwgps({ configured: false, connected: false, name: null });
+    }
+  }
+
+  async function disconnectRwgps() {
+    await apiFetch("/api/rwgps/auth/logout", { method: "POST" }).catch(() => {});
+    refreshRwgps();
+  }
+
+  async function sendToRwgps() {
+    const acts = activities.filter((a) => selected.has(a.id));
+    if (acts.length === 0) return;
+    if (
+      !confirm(
+        `Send ${acts.length} activit${acts.length === 1 ? "y" : "ies"} to RideWithGPS as new trips?`
+      )
+    )
+      return;
+    setExporting(true);
+    const errors: ExportProgress["errors"] = [];
+    let lastUrl: string | undefined;
+    setExportProgress({ kind: "rwgps", total: acts.length, done: 0, errors });
+    for (let i = 0; i < acts.length; i++) {
+      const a = acts[i];
+      try {
+        const gpx = await fetchActivityGpx(a);
+        const res = await apiFetch("/api/rwgps/trips", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            gpx,
+            name: a.name,
+            description: `Exported from Strava (activity ${a.id}) via Strava Batch Editor`,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(String(data.error ?? `HTTP ${res.status}`));
+        if (data.url) lastUrl = data.url as string;
+      } catch (e) {
+        errors.push({
+          id: a.id,
+          name: a.name,
+          error: e instanceof Error ? e.message : "unknown error",
+        });
+      }
+      setExportProgress({
+        kind: "rwgps",
+        total: acts.length,
+        done: i + 1,
+        errors: [...errors],
+        lastUrl,
+      });
+      await new Promise((r) => setTimeout(r, 400));
+    }
+    setExporting(false);
+  }
+
+  async function downloadZip() {
+    const acts = activities.filter((a) => selected.has(a.id));
+    if (acts.length === 0) return;
+    setExporting(true);
+    const errors: ExportProgress["errors"] = [];
+    const files: Array<{ name: string; gpx: string }> = [];
+    setExportProgress({ kind: "zip", total: acts.length, done: 0, errors });
+    for (let i = 0; i < acts.length; i++) {
+      const a = acts[i];
+      try {
+        files.push({ name: gpxFilename(a), gpx: await fetchActivityGpx(a) });
+      } catch (e) {
+        errors.push({
+          id: a.id,
+          name: a.name,
+          error: e instanceof Error ? e.message : "unknown error",
+        });
+      }
+      setExportProgress({
+        kind: "zip",
+        total: acts.length,
+        done: i + 1,
+        errors: [...errors],
+      });
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    if (files.length > 0) {
+      downloadGpxZip(files, `strava-activities-${isoDay(new Date())}.zip`);
+    }
+    setExporting(false);
+  }
 
   function applyPreset(p: (typeof PRESETS)[number]) {
     const now = new Date();
@@ -306,6 +429,7 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d && setStats(d as AthleteStats))
       .catch(() => {});
+    refreshRwgps();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -640,6 +764,139 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
               {progress.errors.map((e) => (
                 <li key={e.id} className="font-mono">
                   #{e.id}: {e.error}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </Card>
+
+      <Card>
+        <SectionHeader
+          icon={<Send className="h-4 w-4" />}
+          title="Send / export"
+          badge={
+            selected.size > 0
+              ? `${selected.size} selected`
+              : undefined
+          }
+        />
+        <p className="mb-3 text-sm text-[color:var(--fg-muted)]">
+          Export the selected activities as GPX, exactly as recorded (no
+          movement filtering). Upload them to your RideWithGPS library, or
+          download a zip — for Komoot (which has no public upload API), drop
+          the zip&apos;s files onto{" "}
+          <a
+            href="https://www.komoot.com/upload"
+            target="_blank"
+            rel="noreferrer"
+            className="underline hover:text-strava"
+          >
+            komoot.com/upload
+          </a>{" "}
+          in one go.
+        </p>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {rwgps?.configured && rwgps.connected && (
+            <button
+              onClick={sendToRwgps}
+              disabled={exporting || selected.size === 0}
+              className="inline-flex items-center gap-2 rounded-full bg-sky-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm shadow-sky-600/30 transition-all hover:scale-[1.02] hover:bg-sky-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {exporting && exportProgress?.kind === "rwgps" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Send className="h-3.5 w-3.5" />
+              )}
+              Send {selected.size > 0 ? selected.size : ""} to RideWithGPS
+            </button>
+          )}
+          {rwgps?.configured && !rwgps.connected && (
+            <a
+              href={rwgpsLoginHref()}
+              className="inline-flex items-center gap-2 rounded-full border border-sky-600/50 px-4 py-1.5 text-sm font-medium !text-sky-600 transition-colors hover:bg-sky-600/10 dark:!text-sky-400"
+            >
+              <Link2 className="h-3.5 w-3.5" />
+              Connect RideWithGPS
+            </a>
+          )}
+          <button
+            onClick={downloadZip}
+            disabled={exporting || selected.size === 0}
+            className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] px-4 py-1.5 text-sm font-medium transition-colors hover:border-strava hover:text-strava disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {exporting && exportProgress?.kind === "zip" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
+            Download {selected.size > 0 ? selected.size : ""} GPX (zip)
+          </button>
+
+          {rwgps?.configured && rwgps.connected && (
+            <span className="inline-flex items-center gap-2 text-xs text-[color:var(--fg-muted)]">
+              RideWithGPS: connected{rwgps.name ? ` as ${rwgps.name}` : ""} ·{" "}
+              <button
+                onClick={disconnectRwgps}
+                className="underline hover:text-red-500"
+              >
+                disconnect
+              </button>
+            </span>
+          )}
+
+          {exportProgress && (
+            <div className="min-w-[160px] max-w-xs flex-1">
+              <div className="h-1.5 overflow-hidden rounded-full bg-[color:var(--row-hover)]">
+                <div
+                  className="h-full rounded-full bg-sky-500 transition-all duration-300"
+                  style={{
+                    width: `${Math.round((exportProgress.done / exportProgress.total) * 100)}%`,
+                  }}
+                />
+              </div>
+              {!exporting && (
+                <p className="mt-1 flex items-center gap-2 text-xs text-[color:var(--fg-muted)]">
+                  {exportProgress.done - exportProgress.errors.length} succeeded
+                  · {exportProgress.errors.length} failed
+                  {exportProgress.lastUrl && (
+                    <a
+                      href={exportProgress.lastUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 font-medium !text-sky-600 hover:underline dark:!text-sky-400"
+                    >
+                      open last trip
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {rwgps && !rwgps.configured && (
+          <p className="mt-3 text-xs text-[color:var(--fg-muted)]">
+            To enable direct RideWithGPS upload, the site owner registers a
+            free RideWithGPS API client and adds its credentials — see the
+            README (Next.js: <code>RWGPS_CLIENT_ID</code> /{" "}
+            <code>RWGPS_CLIENT_SECRET</code> in <code>.env.local</code>;
+            WordPress: Settings → Strava Batch Editor). The GPX zip download
+            works without any setup.
+          </p>
+        )}
+
+        {exportProgress && exportProgress.errors.length > 0 && (
+          <details className="mt-2 text-sm">
+            <summary className="cursor-pointer text-red-500">
+              {exportProgress.errors.length} errors
+            </summary>
+            <ul className="mt-1 space-y-1 text-xs text-red-400">
+              {exportProgress.errors.map((e) => (
+                <li key={e.id} className="font-mono">
+                  #{e.id} {e.name}: {e.error}
                 </li>
               ))}
             </ul>

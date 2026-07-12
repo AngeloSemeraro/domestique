@@ -28,6 +28,18 @@ Select many activities at once and change them in a single pass:
 Filter the list by date range (quick-range chips: 30d / 90d / 6m / 1y / YTD /
 All), sport, name and location.
 
+**Send / export** the selected activities anywhere:
+- **Send to RideWithGPS** — connect your RideWithGPS account (OAuth) and
+  upload the selected activities to your library in one batch. Optional:
+  needs a free [RideWithGPS API client](https://ridewithgps.com/api/v1/doc)
+  configured once (see setup below).
+- **Download GPX (zip)** — every selected activity as a GPX file, exactly as
+  recorded, in a single zip. Works with no setup. This is also the
+  **Komoot** route: Komoot has [no public upload API](https://support.komoot.com/hc/en-us/articles/10331570510618-komoot-API)
+  (partner integrations only, and its private API is off-limits per their
+  terms), but <https://www.komoot.com/upload> accepts many files at once —
+  download the zip, drop the files there, done.
+
 ### 🔀 Merge rides
 Combine multiple rides into one new activity:
 - Sources can be **Strava activities and/or local `.gpx` / `.fit` files**, in
@@ -109,6 +121,25 @@ SESSION_SECRET=<openssl rand -base64 32>
 Get the Client ID/Secret at <https://www.strava.com/settings/api>
 (Authorization Callback Domain: `localhost`).
 
+### Optional: RideWithGPS upload
+
+To enable **Send to RideWithGPS** in the Batch edit tab, register a free API
+client on your RideWithGPS account (developer/API settings — see
+<https://ridewithgps.com/api/v1/doc>), set its OAuth redirect URI to
+`<your app URL>/api/rwgps/auth/callback`, and add to `.env.local`:
+
+```env
+RWGPS_CLIENT_ID=...
+RWGPS_CLIENT_SECRET=...
+# only if your API key differs from the client id:
+RWGPS_API_KEY=
+```
+
+In the WordPress plugin the same credentials go in **Settings → Strava Batch
+Editor** (redirect URI is shown on that page). Each user then connects their
+own RideWithGPS account from the Batch edit tab. Without credentials the
+button is hidden — the GPX zip download always works.
+
 ---
 
 ## Strava rate limits
@@ -180,8 +211,9 @@ Strava's public API has **no delete endpoint** and **no native merge**. So:
 Next.js (App Router) · React · TypeScript · Tailwind CSS · Geist · lucide-react ·
 react-day-picker · iron-session · fit-file-parser · Leaflet +
 OpenStreetMap (Inspector map + tiles) · OpenStreetMap/Nominatim
-(reverse geocoding). See [CONTRIBUTING.md](CONTRIBUTING.md) for the project
-layout and how to help.
+(reverse geocoding) · fflate (zip export) · RideWithGPS API (optional batch
+upload). See [CONTRIBUTING.md](CONTRIBUTING.md) for the project layout and
+how to help.
 
 ## 🤖 Vibe coded with Claude
 

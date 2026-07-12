@@ -127,6 +127,9 @@ final class SBE_Shortcode {
 			'iconUrl'   => esc_url_raw( SBE_PLUGIN_URL . 'assets/icon.png' ),
 			'version'   => SBE_VERSION,
 		);
+		if ( SBE_RWGPS::is_configured() ) {
+			$bootstrap['rwgpsLoginUrl'] = esc_url_raw( SBE_RWGPS::login_url( $this->current_url() ) );
+		}
 		wp_add_inline_script(
 			'sbe-app',
 			'window.SBE_BOOTSTRAP = ' . wp_json_encode( $bootstrap ) . ';',
