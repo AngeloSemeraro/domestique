@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "b=$(git branch --show-current); case \"$b\" in claude/*) git push origin \"$b\" --quiet;; esac 2>/dev/null || true",
+            "timeout": 60,
+            "statusMessage": "Pushing committed work to GitHub…"
+          }
+        ]
+      }
+    ]
+  }
+}

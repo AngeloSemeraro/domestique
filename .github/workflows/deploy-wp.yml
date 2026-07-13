@@ -1,0 +1,72 @@
+# Deploys the WordPress plugin to the live site via FTP on every change
+# that lands on main. Requires three repository secrets (Settings →
+# Secrets and variables → Actions → New repository secret):
+#
+#   WP_FTP_SERVER     e.g. ftp.yoursite.com
+#   WP_FTP_USERNAME   the FTP account
+#   WP_FTP_PASSWORD   its password
+#
+# Optional repository *variables* (same page, "Variables" tab):
+#
+#   WP_FTP_PROTOCOL    ftps (default) | ftp | sftp
+#   WP_FTP_SERVER_DIR  where the plugin folder lives, default
+#                      wp-content/plugins/domestique/ (relative to the
+#                      FTP account's root — adjust if your account lands
+#                      elsewhere, e.g. public_html/wp-content/plugins/domestique/)
+#
+# Without the secrets the workflow still runs the build (useful as CI)
+# and skips the deploy step with a notice.
+
+name: Deploy WP plugin
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "wordpress-plugin/**"
+      - "src/**" # shared React components are bundled into the plugin
+      - "package.json"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-wp
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build plugin bundle
+        working-directory: wordpress-plugin
+        run: |
+          npm install
+          npm run build
+          test -f domestique/assets/js/app.iife.js
+          test -f domestique/assets/css/app.css
+
+      - name: Check FTP secrets
+        id: creds
+        run: |
+          if [ -z "${{ secrets.WP_FTP_SERVER }}" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::WP_FTP_* secrets not set — build only, deploy skipped."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy to WordPress via FTP
+        if: steps.creds.outputs.configured == 'true'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.WP_FTP_SERVER }}
+          username: ${{ secrets.WP_FTP_USERNAME }}
+          password: ${{ secrets.WP_FTP_PASSWORD }}
+          protocol: ${{ vars.WP_FTP_PROTOCOL || 'ftps' }}
+          local-dir: wordpress-plugin/domestique/
+          server-dir: ${{ vars.WP_FTP_SERVER_DIR || 'wp-content/plugins/domestique/' }}
