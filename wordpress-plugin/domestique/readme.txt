@@ -4,7 +4,7 @@ Tags: strava, cycling, gpx, tcx, fit, batch edit, merge
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 0.5.0
+Stable tag: 0.5.1
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -91,9 +91,12 @@ Not affiliated with Strava, Inc.
 
 == Changelog ==
 
+= 0.5.1 =
+* Removed the legacy `[strava_batch_editor]` shortcode aliases entirely. Update any published pages to use `[domestique]` / `[domestique_login]`.
+
 = 0.5.0 =
 * Renamed to **Domestique** — a domestique does the hard work for the team; this plugin does it for your rides.
-* New shortcodes `[domestique]` and `[domestique_login]`. The old `[strava_batch_editor]` shortcodes keep working as hidden aliases, so existing pages don't break.
+* New shortcodes `[domestique]` and `[domestique_login]`.
 * Plugin folder and slug renamed to `domestique`: deactivate and **delete the old plugin**, then install this one. Settings and per-user Strava / RideWithGPS connections are preserved (they live in the database).
 
 = 0.4.0 =
@@ -119,6 +122,9 @@ Not affiliated with Strava, Inc.
 * Initial release: OAuth, settings page, REST proxy, shortcodes, React bundle.
 
 == Upgrade Notice ==
+
+= 0.5.1 =
+Legacy shortcodes removed: replace [strava_batch_editor] with [domestique] on your pages.
 
 = 0.5.0 =
 The plugin is now called Domestique. Delete the old "Strava Batch Editor" plugin first, then install this zip — settings and connections carry over, and the old shortcodes still work.

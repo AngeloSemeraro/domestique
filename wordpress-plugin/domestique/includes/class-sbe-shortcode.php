@@ -31,10 +31,6 @@ final class SBE_Shortcode {
 	public function register(): void {
 		add_shortcode( 'domestique', array( $this, 'render_app' ) );
 		add_shortcode( 'domestique_login', array( $this, 'render_login_button' ) );
-		// Legacy aliases from before the rename to Domestique, kept so pages
-		// published with the old shortcodes keep working. Prefer [domestique].
-		add_shortcode( 'strava_batch_editor', array( $this, 'render_app' ) );
-		add_shortcode( 'strava_batch_editor_login', array( $this, 'render_login_button' ) );
 	}
 
 	public function render_app( $atts ): string {
