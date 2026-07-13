@@ -68,7 +68,7 @@ export default function AppShell({
             <AppLogo size={40} />
             <div>
               <h1 className="text-xl font-bold tracking-tight">
-                Strava Batch Editor
+                Domestique
               </h1>
               <p className="text-xs text-[color:var(--fg-muted)]">{athleteName}</p>
             </div>

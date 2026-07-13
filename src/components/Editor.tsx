@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, rwgpsLoginHref } from "@/lib/api";
 import {
   Activity,
   Bike,
@@ -9,18 +9,32 @@ import {
   Calendar,
   Check,
   ChevronDown,
+  Download,
   Edit3,
+  ExternalLink,
   EyeOff,
   Filter as FilterIcon,
+  Info,
+  Link2,
   Loader2,
   MapPin,
   Pencil,
   RefreshCw,
   Search,
+  Send,
   Trophy,
   Wand2,
   X,
 } from "lucide-react";
+import {
+  buildSourceFit,
+  buildSourceGpx,
+  downloadZip,
+  exportFilename,
+  sourceFromActivity,
+  type ExportSource,
+} from "@/lib/export-client";
+import { LocalFilesPanel, SourceTabs, type LocalFile } from "./SourcePicker";
 import type { ActivityUpdate, StravaActivity, StravaGear } from "@/lib/strava";
 import { workoutTypeForSport, type WorkoutKind } from "@/lib/workout-types";
 import {
@@ -83,6 +97,21 @@ type BatchProgress = {
   errors: Array<{ id: number; error: string }>;
 };
 
+type RwgpsStatus = {
+  configured: boolean;
+  connected: boolean;
+  name: string | null;
+};
+
+type ExportProgress = {
+  kind: "rwgps" | "gpx" | "fit";
+  total: number;
+  done: number;
+  errors: Array<{ id: number; name: string; error: string }>;
+  /** Link to the last uploaded RWGPS trip, shown when the batch finishes. */
+  lastUrl?: string;
+};
+
 const PRESETS: { label: string; days: number | "ytd" | "all" }[] = [
   { label: "30d", days: 30 },
   { label: "90d", days: 90 },
@@ -122,6 +151,142 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
   const [geoProgress, setGeoProgress] = useState<{ done: number; total: number } | null>(null);
   const [stats, setStats] = useState<AthleteStats | null>(null);
   const geoAbortRef = useRef<(() => void) | null>(null);
+
+  const [rwgps, setRwgps] = useState<RwgpsStatus | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
+
+  // Unified sources: the activities card has a "Local files" tab whose
+  // selected files join the Send/export flows alongside Strava rides.
+  const [listTab, setListTab] = useState<"strava" | "files">("strava");
+  const [localFiles, setLocalFiles] = useState<LocalFile[]>([]);
+  const [selectedFileUids, setSelectedFileUids] = useState<Set<string>>(new Set());
+
+  function toggleFile(uid: string) {
+    setSelectedFileUids((prev) => {
+      const next = new Set(prev);
+      if (next.has(uid)) next.delete(uid);
+      else next.add(uid);
+      return next;
+    });
+  }
+
+  function exportSources(): ExportSource[] {
+    let synth = -1;
+    return [
+      ...activities.filter((a) => selected.has(a.id)).map(sourceFromActivity),
+      ...localFiles
+        .filter((f) => selectedFileUids.has(f.uid))
+        .map((f) => ({
+          id: synth--,
+          name: f.name,
+          start_date: f.start_date,
+          sport_hint: "Ride",
+          streams: f.streams,
+        })),
+    ];
+  }
+
+  const exportCount = selected.size + selectedFileUids.size;
+
+  async function refreshRwgps() {
+    try {
+      const res = await apiFetch("/api/rwgps/me");
+      if (!res.ok) throw new Error();
+      setRwgps((await res.json()) as RwgpsStatus);
+    } catch {
+      setRwgps({ configured: false, connected: false, name: null });
+    }
+  }
+
+  async function disconnectRwgps() {
+    await apiFetch("/api/rwgps/auth/logout", { method: "POST" }).catch(() => {});
+    refreshRwgps();
+  }
+
+  async function sendToRwgps() {
+    const sources = exportSources();
+    if (sources.length === 0) return;
+    if (
+      !confirm(
+        `Send ${sources.length} activit${sources.length === 1 ? "y" : "ies"} to RideWithGPS as new trips?`
+      )
+    )
+      return;
+    setExporting(true);
+    const errors: ExportProgress["errors"] = [];
+    let lastUrl: string | undefined;
+    setExportProgress({ kind: "rwgps", total: sources.length, done: 0, errors });
+    for (let i = 0; i < sources.length; i++) {
+      const s = sources[i];
+      try {
+        const gpx = await buildSourceGpx(s);
+        const res = await apiFetch("/api/rwgps/trips", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            gpx,
+            name: s.name,
+            description: `Exported via Domestique${s.id > 0 ? ` (Strava activity ${s.id})` : ""}`,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(String(data.error ?? `HTTP ${res.status}`));
+        if (data.url) lastUrl = data.url as string;
+      } catch (e) {
+        errors.push({
+          id: s.id,
+          name: s.name,
+          error: e instanceof Error ? e.message : "unknown error",
+        });
+      }
+      setExportProgress({
+        kind: "rwgps",
+        total: sources.length,
+        done: i + 1,
+        errors: [...errors],
+        lastUrl,
+      });
+      await new Promise((r) => setTimeout(r, 400));
+    }
+    setExporting(false);
+  }
+
+  async function downloadArchive(format: "gpx" | "fit") {
+    const sources = exportSources();
+    if (sources.length === 0) return;
+    setExporting(true);
+    const errors: ExportProgress["errors"] = [];
+    const files: Array<{ name: string; content: string | Uint8Array }> = [];
+    setExportProgress({ kind: format, total: sources.length, done: 0, errors });
+    for (let i = 0; i < sources.length; i++) {
+      const s = sources[i];
+      try {
+        files.push({
+          name: exportFilename(s, format),
+          content: format === "gpx" ? await buildSourceGpx(s) : await buildSourceFit(s),
+        });
+      } catch (e) {
+        errors.push({
+          id: s.id,
+          name: s.name,
+          error: e instanceof Error ? e.message : "unknown error",
+        });
+      }
+      setExportProgress({
+        kind: format,
+        total: sources.length,
+        done: i + 1,
+        errors: [...errors],
+      });
+      // Local files need no backend fetch — only throttle Strava stream calls.
+      if (!s.streams) await new Promise((r) => setTimeout(r, 250));
+    }
+    if (files.length > 0) {
+      downloadZip(files, `activities-${format}-${isoDay(new Date())}.zip`);
+    }
+    setExporting(false);
+  }
 
   function applyPreset(p: (typeof PRESETS)[number]) {
     const now = new Date();
@@ -306,6 +471,7 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d && setStats(d as AthleteStats))
       .catch(() => {});
+    refreshRwgps();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -478,6 +644,187 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
         </div>
       </Card>
 
+      <Card padding={false}>
+        <div className="px-4 pt-2 md:px-5">
+          <SourceTabs
+            active={listTab}
+            onChange={setListTab}
+            stravaCount={selected.size}
+            fileCount={localFiles.length}
+          />
+        </div>
+        {listTab === "files" ? (
+          <div className="px-4 pb-4 md:px-5 md:pb-5">
+            <LocalFilesPanel
+              mode="multi"
+              files={localFiles}
+              selectedUids={selectedFileUids}
+              onToggle={toggleFile}
+              onAdd={(added) => {
+                setLocalFiles((prev) => {
+                  const map = new Map(prev.map((f) => [f.uid, f]));
+                  for (const f of added) map.set(f.uid, f);
+                  return Array.from(map.values());
+                });
+                // Newly added files start selected — that's why you add them.
+                setSelectedFileUids((prev) => {
+                  const next = new Set(prev);
+                  for (const f of added) next.add(f.uid);
+                  return next;
+                });
+              }}
+              onRemove={(uid) => {
+                setLocalFiles((prev) => prev.filter((f) => f.uid !== uid));
+                setSelectedFileUids((prev) => {
+                  const next = new Set(prev);
+                  next.delete(uid);
+                  return next;
+                });
+              }}
+            />
+          </div>
+        ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="border-b border-[color:var(--border)] text-left">
+              <tr className="text-xs uppercase tracking-wider text-[color:var(--fg-muted)]">
+                <th className="p-3">
+                  <input
+                    type="checkbox"
+                    checked={
+                      filtered.length > 0 && selected.size === filtered.length
+                    }
+                    onChange={toggleAll}
+                    className="accent-strava"
+                  />
+                </th>
+                <th className="p-3 font-medium">Date</th>
+                <th className="p-3 font-medium">Name</th>
+                <th className="p-3 font-medium">Sport</th>
+                <th className="p-3 font-medium">Distance</th>
+                <th className="p-3 font-medium">Location</th>
+                <th className="p-3 font-medium">Gear</th>
+                <th className="p-3 font-medium">Flags</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((a, i) => (
+                <tr
+                  key={a.id}
+                  style={{ animationDelay: `${Math.min(i, 20) * 15}ms` }}
+                  className="animate-fade-in border-b border-[color:var(--border)] transition-colors hover:bg-[color:var(--row-hover)]"
+                >
+                  <td className="p-3">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(a.id)}
+                      onChange={() => toggle(a.id)}
+                      className="accent-strava"
+                    />
+                  </td>
+                  <td className="p-3 whitespace-nowrap text-[color:var(--fg-muted)]">
+                    {a.start_date_local.slice(0, 10)}
+                  </td>
+                  <td className="p-3">
+                    <NameCell
+                      activity={a}
+                      onRenamed={(newName) =>
+                        setActivities((prev) =>
+                          prev.map((x) =>
+                            x.id === a.id ? { ...x, name: newName } : x
+                          )
+                        )
+                      }
+                    />
+                  </td>
+                  <td className="p-3">
+                    <span className="rounded-full bg-[color:var(--row-hover)] px-2 py-0.5 text-xs">
+                      {a.sport_type}
+                    </span>
+                  </td>
+                  <td className="p-3 whitespace-nowrap font-mono text-xs">
+                    {(a.distance / 1000).toFixed(1)} km
+                  </td>
+                  <td className="p-3 text-[color:var(--fg-muted)]">
+                    {(() => {
+                      const real = [
+                        a.location_city,
+                        a.location_state,
+                        a.location_country,
+                      ]
+                        .filter(Boolean)
+                        .join(", ");
+                      if (real) return real;
+                      const g = geo[a.id];
+                      if (g) {
+                        const text = formatGeo(g);
+                        return text ? (
+                          <span title="Reverse-geocoded from start coordinates">
+                            {text}
+                          </span>
+                        ) : (
+                          "—"
+                        );
+                      }
+                      const ll = a.start_latlng;
+                      if (ll && ll.length === 2 && geoProgress) {
+                        return (
+                          <span className="text-[color:var(--fg-muted)]/60">
+                            …
+                          </span>
+                        );
+                      }
+                      return "—";
+                    })()}
+                  </td>
+                  <td className="p-3 text-[color:var(--fg-muted)]">
+                    {bikes.find((b) => b.id === a.gear_id)?.name ??
+                      a.gear_id ??
+                      "—"}
+                  </td>
+                  <td className="p-3">
+                    <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-wider">
+                      {a.trainer && (
+                        <span className="rounded bg-blue-500/15 px-1.5 py-0.5 text-blue-500">
+                          trainer
+                        </span>
+                      )}
+                      {a.commute && (
+                        <span className="rounded bg-purple-500/15 px-1.5 py-0.5 text-purple-500">
+                          commute
+                        </span>
+                      )}
+                      {a.hide_from_home && (
+                        <span className="rounded bg-neutral-500/15 px-1.5 py-0.5 text-neutral-500">
+                          hidden
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {!loading && filtered.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="p-10 text-center text-[color:var(--fg-muted)]"
+                  >
+                    No activities. Try widening the date range or click <b>All</b>.
+                  </td>
+                </tr>
+              )}
+              {loading && (
+                <tr>
+                  <td colSpan={8} className="p-10 text-center">
+                    <Loader2 className="mx-auto h-5 w-5 animate-spin text-strava" />
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        )}
+      </Card>
       <Card>
         <SectionHeader
           icon={<Edit3 className="h-4 w-4" />}
@@ -645,6 +992,169 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
             </ul>
           </details>
         )}
+        {selectedFileUids.size > 0 && (
+          <p className="mt-3 text-xs text-[color:var(--fg-muted)]">
+            <Info className="mr-1 inline h-3 w-3" />
+            Batch edit applies to Strava rides only — the{" "}
+            {selectedFileUids.size} selected local file
+            {selectedFileUids.size === 1 ? "" : "s"} are used by Send / export
+            below.
+          </p>
+        )}
+      </Card>
+
+      <Card>
+        <SectionHeader
+          icon={<Send className="h-4 w-4" />}
+          title="Send / export"
+          badge={exportCount > 0 ? `${exportCount} selected` : undefined}
+        />
+        <p className="mb-3 text-sm text-[color:var(--fg-muted)]">
+          Export the selected activities (Strava rides and local files),
+          exactly as recorded — no movement filtering. Download them as GPX or
+          FIT, or upload them straight to your RideWithGPS library. For
+          Komoot, download a zip and drop its files onto{" "}
+          <a
+            href="https://www.komoot.com/upload"
+            target="_blank"
+            rel="noreferrer"
+            className="underline hover:text-strava"
+          >
+            komoot.com/upload
+          </a>{" "}
+          in one go.
+        </p>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => downloadArchive("gpx")}
+            disabled={exporting || exportCount === 0}
+            className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] px-4 py-1.5 text-sm font-medium transition-colors hover:border-strava hover:text-strava disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {exporting && exportProgress?.kind === "gpx" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
+            Download {exportCount > 0 ? exportCount : ""} GPX (zip)
+          </button>
+          <button
+            onClick={() => downloadArchive("fit")}
+            disabled={exporting || exportCount === 0}
+            className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] px-4 py-1.5 text-sm font-medium transition-colors hover:border-strava hover:text-strava disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {exporting && exportProgress?.kind === "fit" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
+            Download {exportCount > 0 ? exportCount : ""} FIT (zip)
+          </button>
+          <button
+            disabled
+            title="Komoot has no public API and account connections require a partner agreement with Komoot — there is nothing to set up. Download the GPX/FIT zip and drop the files onto komoot.com/upload instead."
+            className="inline-flex cursor-not-allowed items-center gap-2 rounded-full border border-[color:var(--border)] px-4 py-1.5 text-sm font-medium opacity-40"
+          >
+            <Send className="h-3.5 w-3.5" />
+            Upload to Komoot
+          </button>
+          <button
+            onClick={sendToRwgps}
+            disabled={exporting || exportCount === 0 || !rwgps?.connected}
+            title={
+              !rwgps?.configured
+                ? "Requires the site owner to configure a RideWithGPS API client — see README / plugin settings."
+                : !rwgps.connected
+                  ? "Connect your RideWithGPS account first."
+                  : undefined
+            }
+            className="inline-flex items-center gap-2 rounded-full bg-sky-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm shadow-sky-600/30 transition-all hover:scale-[1.02] hover:bg-sky-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {exporting && exportProgress?.kind === "rwgps" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Send className="h-3.5 w-3.5" />
+            )}
+            Upload {exportCount > 0 ? exportCount : ""} to RideWithGPS
+          </button>
+          {rwgps?.configured && !rwgps.connected && (
+            <a
+              href={rwgpsLoginHref()}
+              className="inline-flex items-center gap-2 rounded-full border border-sky-600/50 px-4 py-1.5 text-sm font-medium !text-sky-600 transition-colors hover:bg-sky-600/10 dark:!text-sky-400"
+            >
+              <Link2 className="h-3.5 w-3.5" />
+              Connect RideWithGPS
+            </a>
+          )}
+
+          {rwgps?.configured && rwgps.connected && (
+            <span className="inline-flex items-center gap-2 text-xs text-[color:var(--fg-muted)]">
+              RideWithGPS: connected{rwgps.name ? ` as ${rwgps.name}` : ""} ·{" "}
+              <button
+                onClick={disconnectRwgps}
+                className="underline hover:text-red-500"
+              >
+                disconnect
+              </button>
+            </span>
+          )}
+
+          {exportProgress && (
+            <div className="min-w-[160px] max-w-xs flex-1">
+              <div className="h-1.5 overflow-hidden rounded-full bg-[color:var(--row-hover)]">
+                <div
+                  className="h-full rounded-full bg-sky-500 transition-all duration-300"
+                  style={{
+                    width: `${Math.round((exportProgress.done / exportProgress.total) * 100)}%`,
+                  }}
+                />
+              </div>
+              {!exporting && (
+                <p className="mt-1 flex items-center gap-2 text-xs text-[color:var(--fg-muted)]">
+                  {exportProgress.done - exportProgress.errors.length} succeeded
+                  · {exportProgress.errors.length} failed
+                  {exportProgress.lastUrl && (
+                    <a
+                      href={exportProgress.lastUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 font-medium !text-sky-600 hover:underline dark:!text-sky-400"
+                    >
+                      open last trip
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {rwgps && !rwgps.configured && (
+          <p className="mt-3 text-xs text-[color:var(--fg-muted)]">
+            To enable direct RideWithGPS upload, the site owner registers a
+            free RideWithGPS API client and adds its credentials — see the
+            README (Next.js: <code>RWGPS_CLIENT_ID</code> /{" "}
+            <code>RWGPS_CLIENT_SECRET</code> in <code>.env.local</code>;
+            WordPress: Settings → Domestique). The GPX zip download
+            works without any setup.
+          </p>
+        )}
+
+        {exportProgress && exportProgress.errors.length > 0 && (
+          <details className="mt-2 text-sm">
+            <summary className="cursor-pointer text-red-500">
+              {exportProgress.errors.length} errors
+            </summary>
+            <ul className="mt-1 space-y-1 text-xs text-red-400">
+              {exportProgress.errors.map((e) => (
+                <li key={e.id} className="font-mono">
+                  #{e.id} {e.name}: {e.error}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
       </Card>
 
       {stats?.all_ride_totals && (
@@ -686,147 +1196,6 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
         </Card>
       )}
 
-      <Card padding={false}>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="border-b border-[color:var(--border)] text-left">
-              <tr className="text-xs uppercase tracking-wider text-[color:var(--fg-muted)]">
-                <th className="p-3">
-                  <input
-                    type="checkbox"
-                    checked={
-                      filtered.length > 0 && selected.size === filtered.length
-                    }
-                    onChange={toggleAll}
-                    className="accent-strava"
-                  />
-                </th>
-                <th className="p-3 font-medium">Date</th>
-                <th className="p-3 font-medium">Name</th>
-                <th className="p-3 font-medium">Sport</th>
-                <th className="p-3 font-medium">Distance</th>
-                <th className="p-3 font-medium">Location</th>
-                <th className="p-3 font-medium">Gear</th>
-                <th className="p-3 font-medium">Flags</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((a, i) => (
-                <tr
-                  key={a.id}
-                  style={{ animationDelay: `${Math.min(i, 20) * 15}ms` }}
-                  className="animate-fade-in border-b border-[color:var(--border)] transition-colors hover:bg-[color:var(--row-hover)]"
-                >
-                  <td className="p-3">
-                    <input
-                      type="checkbox"
-                      checked={selected.has(a.id)}
-                      onChange={() => toggle(a.id)}
-                      className="accent-strava"
-                    />
-                  </td>
-                  <td className="p-3 whitespace-nowrap text-[color:var(--fg-muted)]">
-                    {a.start_date_local.slice(0, 10)}
-                  </td>
-                  <td className="p-3">
-                    <NameCell
-                      activity={a}
-                      onRenamed={(newName) =>
-                        setActivities((prev) =>
-                          prev.map((x) =>
-                            x.id === a.id ? { ...x, name: newName } : x
-                          )
-                        )
-                      }
-                    />
-                  </td>
-                  <td className="p-3">
-                    <span className="rounded-full bg-[color:var(--row-hover)] px-2 py-0.5 text-xs">
-                      {a.sport_type}
-                    </span>
-                  </td>
-                  <td className="p-3 whitespace-nowrap font-mono text-xs">
-                    {(a.distance / 1000).toFixed(1)} km
-                  </td>
-                  <td className="p-3 text-[color:var(--fg-muted)]">
-                    {(() => {
-                      const real = [
-                        a.location_city,
-                        a.location_state,
-                        a.location_country,
-                      ]
-                        .filter(Boolean)
-                        .join(", ");
-                      if (real) return real;
-                      const g = geo[a.id];
-                      if (g) {
-                        const text = formatGeo(g);
-                        return text ? (
-                          <span title="Reverse-geocoded from start coordinates">
-                            {text}
-                          </span>
-                        ) : (
-                          "—"
-                        );
-                      }
-                      const ll = a.start_latlng;
-                      if (ll && ll.length === 2 && geoProgress) {
-                        return (
-                          <span className="text-[color:var(--fg-muted)]/60">
-                            …
-                          </span>
-                        );
-                      }
-                      return "—";
-                    })()}
-                  </td>
-                  <td className="p-3 text-[color:var(--fg-muted)]">
-                    {bikes.find((b) => b.id === a.gear_id)?.name ??
-                      a.gear_id ??
-                      "—"}
-                  </td>
-                  <td className="p-3">
-                    <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-wider">
-                      {a.trainer && (
-                        <span className="rounded bg-blue-500/15 px-1.5 py-0.5 text-blue-500">
-                          trainer
-                        </span>
-                      )}
-                      {a.commute && (
-                        <span className="rounded bg-purple-500/15 px-1.5 py-0.5 text-purple-500">
-                          commute
-                        </span>
-                      )}
-                      {a.hide_from_home && (
-                        <span className="rounded bg-neutral-500/15 px-1.5 py-0.5 text-neutral-500">
-                          hidden
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!loading && filtered.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="p-10 text-center text-[color:var(--fg-muted)]"
-                  >
-                    No activities. Try widening the date range or click <b>All</b>.
-                  </td>
-                </tr>
-              )}
-              {loading && (
-                <tr>
-                  <td colSpan={8} className="p-10 text-center">
-                    <Loader2 className="mx-auto h-5 w-5 animate-spin text-strava" />
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
     </div>
   );
 }

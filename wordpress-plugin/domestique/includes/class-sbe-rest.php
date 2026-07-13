@@ -7,7 +7,7 @@
  * Phase-3 / phase-4 implementation. Phase 1 registers placeholders so the
  * routes exist; full Strava proxy lands when the React bundle is wired in.
  *
- * @package StravaBatchEditor
+ * @package Domestique
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -242,7 +242,7 @@ final class SBE_REST {
 			array(
 				'timeout' => 10,
 				'headers' => array(
-					'User-Agent'      => 'strava-batch-editor-wp/' . SBE_VERSION . ' (' . home_url( '/' ) . ')',
+					'User-Agent'      => 'domestique-wp/' . SBE_VERSION . ' (' . home_url( '/' ) . ')',
 					'Accept-Language' => get_locale() ? substr( get_locale(), 0, 2 ) : 'en',
 				),
 			)

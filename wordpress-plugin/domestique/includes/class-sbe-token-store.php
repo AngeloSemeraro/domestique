@@ -3,7 +3,7 @@
  * Per-user Strava token storage. Tokens live in user_meta so each WordPress
  * user manages their own Strava connection independently.
  *
- * @package StravaBatchEditor
+ * @package Domestique
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

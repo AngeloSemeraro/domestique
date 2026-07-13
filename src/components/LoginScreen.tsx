@@ -8,7 +8,7 @@ export default function LoginScreen({ error }: { error?: string }) {
       <div className="animate-scale-in flex flex-col items-center gap-4">
         <AppLogo size={72} />
         <h1 className="text-center text-4xl font-bold tracking-tight">
-          Strava Batch Editor
+          Domestique
         </h1>
         <p className="max-w-md text-center text-[color:var(--fg-muted)]">
           Edit sport type, gear, indoor flag and visibility on many activities

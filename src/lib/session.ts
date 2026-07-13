@@ -7,13 +7,16 @@ export type StravaSession = {
   accessToken?: string;
   refreshToken?: string;
   expiresAt?: number;
+  /** RideWithGPS OAuth token (optional integration). */
+  rwgpsAccessToken?: string;
+  rwgpsUserName?: string;
 };
 
 const secret = process.env.SESSION_SECRET ?? "";
 
 export const sessionOptions: SessionOptions = {
   password: secret,
-  cookieName: "strava_batch_session",
+  cookieName: "domestique_session",
   cookieOptions: {
     httpOnly: true,
     sameSite: "lax",

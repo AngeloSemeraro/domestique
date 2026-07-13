@@ -48,7 +48,7 @@ export default defineConfig({
     "process.platform": JSON.stringify("browser"),
   },
   build: {
-    outDir: path.resolve(__dirname, "strava-batch-editor/assets"),
+    outDir: path.resolve(__dirname, "domestique/assets"),
     emptyOutDir: false, // keep the icon.png that already lives there
     cssCodeSplit: false,
     sourcemap: false,

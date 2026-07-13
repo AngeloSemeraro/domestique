@@ -2,7 +2,7 @@
 /**
  * Thin HTTP client for the Strava API. Handles token refresh transparently.
  *
- * @package StravaBatchEditor
+ * @package Domestique
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

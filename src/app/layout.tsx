@@ -4,7 +4,7 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Strava Batch Editor",
+  title: "Domestique",
   description: "Edit multiple Strava activities at once",
 };
 

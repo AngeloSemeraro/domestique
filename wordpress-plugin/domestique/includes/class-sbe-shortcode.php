@@ -2,17 +2,17 @@
 /**
  * Shortcodes that render the app inside any WordPress page or post.
  *
- *   [strava_batch_editor]                       full app, all three tabs
- *   [strava_batch_editor tab="edit"]            Batch edit only
- *   [strava_batch_editor tab="merge"]           Merge rides only
- *   [strava_batch_editor tab="inspector"]       Inspector only
- *   [strava_batch_editor_login]                 just the Connect button
+ *   [domestique]                       full app, all three tabs
+ *   [domestique tab="edit"]            Batch edit only
+ *   [domestique tab="merge"]           Merge rides only
+ *   [domestique tab="inspector"]       Inspector only
+ *   [domestique_login]                 just the Connect button
  *
  * The React bundle (assets/js/app.iife.js + assets/css/app.css) is enqueued
  * lazily — only on pages that actually contain a shortcode — and reads the
  * bootstrap data from a window.SBE_BOOTSTRAP block printed inline.
  *
- * @package StravaBatchEditor
+ * @package Domestique
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -29,6 +29,10 @@ final class SBE_Shortcode {
 	private bool $assets_enqueued = false;
 
 	public function register(): void {
+		add_shortcode( 'domestique', array( $this, 'render_app' ) );
+		add_shortcode( 'domestique_login', array( $this, 'render_login_button' ) );
+		// Legacy aliases from before the rename to Domestique, kept so pages
+		// published with the old shortcodes keep working. Prefer [domestique].
 		add_shortcode( 'strava_batch_editor', array( $this, 'render_app' ) );
 		add_shortcode( 'strava_batch_editor_login', array( $this, 'render_login_button' ) );
 	}
@@ -39,7 +43,7 @@ final class SBE_Shortcode {
 				'tab' => 'all',
 			),
 			$atts,
-			'strava_batch_editor'
+			'domestique'
 		);
 
 		if ( ! is_user_logged_in() ) {
@@ -63,14 +67,14 @@ final class SBE_Shortcode {
 		}
 
 		return sprintf(
-			'<div class="sbe-mount" id="%s" data-sbe-mount="1" data-sbe-tab="%s"><div style="padding:1rem;color:#888;font:14px/1.4 system-ui">' . esc_html__( 'Loading Strava Batch Editor…', 'strava-batch-editor' ) . '</div></div>',
+			'<div class="sbe-mount" id="%s" data-sbe-mount="1" data-sbe-tab="%s"><div style="padding:1rem;color:#888;font:14px/1.4 system-ui">' . esc_html__( 'Loading Domestique…', 'domestique' ) . '</div></div>',
 			esc_attr( $id ),
 			esc_attr( in_array( $tab, array( 'edit', 'merge', 'inspector', 'all' ), true ) ? $tab : 'all' )
 		);
 	}
 
 	public function render_login_button( $atts ): string {
-		$atts = shortcode_atts( array( 'label' => __( 'Connect with Strava', 'strava-batch-editor' ) ), $atts );
+		$atts = shortcode_atts( array( 'label' => __( 'Connect with Strava', 'domestique' ) ), $atts );
 
 		if ( ! is_user_logged_in() ) {
 			return $this->wp_login_notice();
@@ -127,6 +131,9 @@ final class SBE_Shortcode {
 			'iconUrl'   => esc_url_raw( SBE_PLUGIN_URL . 'assets/icon.png' ),
 			'version'   => SBE_VERSION,
 		);
+		if ( SBE_RWGPS::is_configured() ) {
+			$bootstrap['rwgpsLoginUrl'] = esc_url_raw( SBE_RWGPS::login_url( $this->current_url() ) );
+		}
 		wp_add_inline_script(
 			'sbe-app',
 			'window.SBE_BOOTSTRAP = ' . wp_json_encode( $bootstrap ) . ';',
@@ -143,16 +150,16 @@ npm install
 npm run build</pre>
 				%3$s
 			</div>',
-			esc_html__( 'Strava Batch Editor: React bundle not built yet.', 'strava-batch-editor' ),
-			esc_html__( 'The plugin folder is missing assets/js/app.iife.js. Build the bundle from the project sources:', 'strava-batch-editor' ),
-			esc_html__( 'Then copy assets/js/app.iife.js and assets/css/app.css into this plugin folder. (Visible to admins only.)', 'strava-batch-editor' )
+			esc_html__( 'Domestique: React bundle not built yet.', 'domestique' ),
+			esc_html__( 'The plugin folder is missing assets/js/app.iife.js. Build the bundle from the project sources:', 'domestique' ),
+			esc_html__( 'Then copy assets/js/app.iife.js and assets/css/app.css into this plugin folder. (Visible to admins only.)', 'domestique' )
 		);
 	}
 
 	private function bundle_missing_user_notice(): string {
 		return sprintf(
 			'<div class="sbe-notice" style="padding:1rem;border:1px solid #ddd;border-radius:.5rem;background:#f6f7f7;">%s</div>',
-			esc_html__( 'Strava Batch Editor is being set up. Please check back in a moment.', 'strava-batch-editor' )
+			esc_html__( 'Domestique is being set up. Please check back in a moment.', 'domestique' )
 		);
 	}
 
@@ -160,9 +167,9 @@ npm run build</pre>
 		$login_url = wp_login_url( $this->current_url() );
 		return sprintf(
 			'<div class="sbe-notice" style="padding:1rem;border:1px solid #ddd;border-radius:.5rem;background:#f6f7f7;">%s <a href="%s">%s</a></div>',
-			esc_html__( 'You need to be logged in to use Strava Batch Editor.', 'strava-batch-editor' ),
+			esc_html__( 'You need to be logged in to use Domestique.', 'domestique' ),
 			esc_url( $login_url ),
-			esc_html__( 'Log in', 'strava-batch-editor' )
+			esc_html__( 'Log in', 'domestique' )
 		);
 	}
 
@@ -170,14 +177,14 @@ npm run build</pre>
 		if ( current_user_can( 'manage_options' ) ) {
 			return sprintf(
 				'<div class="sbe-notice" style="padding:1rem;border:1px solid #f0b849;border-radius:.5rem;background:#fdf7e7;">%s <a href="%s">%s</a></div>',
-				esc_html__( 'Strava Batch Editor is not configured yet.', 'strava-batch-editor' ),
-				esc_url( admin_url( 'options-general.php?page=strava-batch-editor' ) ),
-				esc_html__( 'Open settings', 'strava-batch-editor' )
+				esc_html__( 'Domestique is not configured yet.', 'domestique' ),
+				esc_url( admin_url( 'options-general.php?page=domestique' ) ),
+				esc_html__( 'Open settings', 'domestique' )
 			);
 		}
 		return sprintf(
 			'<div class="sbe-notice" style="padding:1rem;border:1px solid #ddd;border-radius:.5rem;background:#f6f7f7;">%s</div>',
-			esc_html__( 'Strava Batch Editor is not configured yet. Ask the site administrator to set it up.', 'strava-batch-editor' )
+			esc_html__( 'Domestique is not configured yet. Ask the site administrator to set it up.', 'domestique' )
 		);
 	}
 

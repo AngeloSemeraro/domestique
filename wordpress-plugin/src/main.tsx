@@ -13,6 +13,8 @@ declare global {
       meUrl: string;
       iconUrl: string;
       version: string;
+      /** Present when the WP admin configured the RideWithGPS API client. */
+      rwgpsLoginUrl?: string;
     };
   }
 }

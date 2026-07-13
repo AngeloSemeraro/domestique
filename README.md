@@ -1,11 +1,13 @@
 <div align="center">
 
-<img src="public/icon.png" width="96" alt="Strava Batch Editor logo" />
+<img src="public/icon.png" width="96" alt="Domestique logo" />
 
-# Strava Batch Editor
+# Domestique
 
-Edit, merge and clean up your Strava rides in bulk — runs entirely on
-your own machine, talks only to your own Strava account.
+A *domestique* does the hard work so the team captain doesn't have to.
+This one does it for your rides: **batch edit, merge, inspect and export
+your Strava activities** — running entirely on your own machine, talking
+only to your own Strava account.
 
 **Free software (GPLv3) · self-hosted · no servers, no tracking, no accounts.**
 
@@ -28,10 +30,25 @@ Select many activities at once and change them in a single pass:
 Filter the list by date range (quick-range chips: 30d / 90d / 6m / 1y / YTD /
 All), sport, name and location.
 
+The activities list has two tabs — **Strava rides** and **Local files**
+(.gpx/.fit) — and the selection from both feeds **Send / export**:
+- **Download GPX (zip)** / **Download FIT (zip)** — every selected activity,
+  exactly as recorded, in a single zip (FIT files come from a built-in
+  encoder). Works with no setup. This is also the **Komoot** route: Komoot
+  has [no public upload API](https://support.komoot.com/hc/en-us/articles/10331570510618-komoot-API)
+  (partner integrations only, and its private API is off-limits per their
+  terms), but <https://www.komoot.com/upload> accepts many files at once —
+  download the zip, drop the files there, done. The disabled "Upload to
+  Komoot" button in the UI says exactly this.
+- **Upload to RideWithGPS** — connect your RideWithGPS account (OAuth) and
+  upload the selection to your library in one batch. Optional: needs a free
+  [RideWithGPS API client](https://ridewithgps.com/api/v1/doc) configured
+  once (see setup below).
+
 ### 🔀 Merge rides
 Combine multiple rides into one new activity:
 - Sources can be **Strava activities and/or local `.gpx` / `.fit` files**, in
-  any mix
+  any mix, picked from one unified box (same in all three tabs)
 - **Movement filter** drops non-cycling stretches (long pauses, a train/car
   transfer between sessions) using speed + cadence + heart-rate signals, so the
   merged ride only contains the parts you actually rode
@@ -41,7 +58,8 @@ Combine multiple rides into one new activity:
   carries the real distance odometer so the total is correct) or **GPX**
 
 ### 🔍 Inspector
-Drop a single `.gpx` / `.fit` (or send the merge result here) to:
+Pick one of your Strava rides, drop a single `.gpx` / `.fit` (or send the
+merge result here) to:
 - **explore the track on an interactive map** (OpenStreetMap) with start/end
   markers, filter-dropped segments dashed, and **togglable waypoints** (GPX
   `<wpt>` / FIT course points)
@@ -78,8 +96,8 @@ live only in a local `.env.local` file, and nothing is ever sent to a third
 party. You need [Node.js 18+](https://nodejs.org) and a Strava account.
 
 ```bash
-git clone https://github.com/AngeloSemeraro/strava_batch_editor.git
-cd strava_batch_editor
+git clone https://github.com/AngeloSemeraro/domestique.git
+cd domestique
 npm install
 npm run dev
 ```
@@ -109,6 +127,26 @@ SESSION_SECRET=<openssl rand -base64 32>
 Get the Client ID/Secret at <https://www.strava.com/settings/api>
 (Authorization Callback Domain: `localhost`).
 
+### Optional: RideWithGPS upload
+
+To enable **Send to RideWithGPS** in the Batch edit tab, register a free API
+client on your RideWithGPS account (developer/API settings — see
+<https://ridewithgps.com/api/v1/doc>), set its OAuth redirect URI to
+`<your app URL>/api/rwgps/auth/callback`, and add to `.env.local`:
+
+```env
+RWGPS_CLIENT_ID=...
+RWGPS_CLIENT_SECRET=...
+# only if your API key differs from the client id:
+RWGPS_API_KEY=
+```
+
+In the WordPress plugin the same credentials go in **Settings → Domestique**
+(redirect URI is shown on that page). Each user then connects their
+own RideWithGPS account from the Batch edit tab. Without credentials the
+upload button stays disabled (its tooltip says why) — the GPX/FIT zip
+downloads always work.
+
 ---
 
 ## Strava rate limits
@@ -131,32 +169,32 @@ don't want to run Node locally.
 | Where it runs | Your computer (`npm run dev`) | Your WordPress site |
 | Login | Browser cookie session | Standard WordPress login |
 | Multi-user | Single user per install | Each WP user connects their own Strava |
-| Access | `localhost:3000` | Any page with `[strava_batch_editor]` |
+| Access | `localhost:3000` | Any page with `[domestique]` |
 
 **Shortcodes** the plugin exposes:
 
 ```
-[strava_batch_editor]                     full app, all three tabs
-[strava_batch_editor tab="edit"]          Batch edit only
-[strava_batch_editor tab="merge"]         Merge rides only
-[strava_batch_editor tab="inspector"]     Inspector only
-[strava_batch_editor_login]               just the Connect with Strava button
+[domestique]                     full app, all three tabs
+[domestique tab="edit"]          Batch edit only
+[domestique tab="merge"]         Merge rides only
+[domestique tab="inspector"]     Inspector only
+[domestique_login]               just the Connect with Strava button
 ```
 
 **Get it:**
 
-- Pre-built installable ZIPs land on the [Releases page](https://github.com/AngeloSemeraro/strava_batch_editor/releases)
+- Pre-built installable ZIPs land on the [Releases page](https://github.com/AngeloSemeraro/domestique/releases)
 - Or build from source — the plugin lives under [`wordpress-plugin/`](wordpress-plugin/):
 
   ```bash
-  git clone https://github.com/AngeloSemeraro/strava_batch_editor.git
-  cd strava_batch_editor/wordpress-plugin
+  git clone https://github.com/AngeloSemeraro/domestique.git
+  cd domestique/wordpress-plugin
   npm install && npm run build
-  zip -r strava-batch-editor.zip strava-batch-editor -x "*.DS_Store"
+  zip -r domestique.zip domestique -x "*.DS_Store"
   ```
 
   Then in WordPress: **Plugins → Add New → Upload Plugin** → pick the zip →
-  **Activate** → **Settings → Strava Batch Editor** to paste your Strava API
+  **Activate** → **Settings → Domestique** to paste your Strava API
   credentials. See [`wordpress-plugin/README.md`](wordpress-plugin/README.md)
   for the full architecture (PHP backend, REST endpoints, OAuth flow).
 
@@ -180,8 +218,9 @@ Strava's public API has **no delete endpoint** and **no native merge**. So:
 Next.js (App Router) · React · TypeScript · Tailwind CSS · Geist · lucide-react ·
 react-day-picker · iron-session · fit-file-parser · Leaflet +
 OpenStreetMap (Inspector map + tiles) · OpenStreetMap/Nominatim
-(reverse geocoding). See [CONTRIBUTING.md](CONTRIBUTING.md) for the project
-layout and how to help.
+(reverse geocoding) · fflate (zip export) · RideWithGPS API (optional batch
+upload). See [CONTRIBUTING.md](CONTRIBUTING.md) for the project layout and
+how to help.
 
 ## 🤖 Vibe coded with Claude
 
@@ -193,7 +232,7 @@ by one person in their spare time who can't debug it line by line.
 
 ## ⚠️ As-is, no support
 
-Strava Batch Editor is provided **as is**, with no warranty of any kind
+Domestique is provided **as is**, with no warranty of any kind
 (see GPLv3 sections 15-16 for the legal text). In plain English:
 
 - **No guaranteed updates.** If Strava changes its API, this tool may

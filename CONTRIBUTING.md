@@ -14,8 +14,8 @@ fixes and ideas are all welcome.
 ## Getting set up
 
 ```bash
-git clone https://github.com/AngeloSemeraro/strava_batch_editor.git
-cd strava_batch_editor
+git clone https://github.com/AngeloSemeraro/domestique.git
+cd domestique
 npm install
 npm run dev
 ```
@@ -51,6 +51,7 @@ src/
     Editor.tsx               # Batch edit tab
     MergeTab.tsx             # Merge rides tab
     AnalyzerTab.tsx          # Inspector tab
+    SourcePicker.tsx         # shared Strava rides / Local files source box
     TrackMap.tsx             # Inspector's Leaflet map (+ TrackMapLazy.tsx loader)
     ElevationProfile.tsx     # gradient-colored, zoomable elevation view
     OnboardingWizard.tsx     # 4-step setup
@@ -59,6 +60,9 @@ src/
     strava.ts                # Strava API client + token refresh
     gpx.ts                   # merge planning, GPX + TCX builders, filters
     file-parsers.ts          # browser-side GPX + FIT parsing
+    export-client.ts         # batch GPX/FIT export helpers (zip, RWGPS payloads)
+    fit-writer.ts            # minimal FIT activity file encoder
+    rwgps.ts                 # server-side RideWithGPS OAuth + trip upload
     session.ts               # iron-session config
     onboarding.ts            # env-var checks
 ```

@@ -1,6 +1,6 @@
 {
-  "name": "strava-batch-editor-wp-bundle",
-  "version": "0.1.0",
+  "name": "domestique-wp-bundle",
+  "version": "0.5.0",
   "private": true,
   "description": "Vite build that packages the React app into a single JS+CSS bundle the WordPress plugin enqueues.",
   "license": "GPL-3.0-or-later",
@@ -9,6 +9,7 @@
     "build": "vite build"
   },
   "dependencies": {
+    "fflate": "^0.8.3",
     "fit-file-parser": "^3.0.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.21.0",

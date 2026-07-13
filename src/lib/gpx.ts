@@ -509,7 +509,7 @@ export function buildMergedGpx(
   }
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Strava Batch Editor" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">
+<gpx version="1.1" creator="Domestique" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">
 <metadata><name>${xmlEsc(trackName)}</name><time>${metadataTime}</time></metadata>
 ${segs}
 </gpx>`;
@@ -585,6 +585,6 @@ export function buildMergedTcx(
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd">
-<Activities><Activity Sport="${sport}"><Id>${activityId}</Id><Notes>${xmlEsc(trackName)}</Notes>${laps}<Creator xsi:type="Device_t"><Name>Strava Batch Editor</Name></Creator></Activity></Activities>
+<Activities><Activity Sport="${sport}"><Id>${activityId}</Id><Notes>${xmlEsc(trackName)}</Notes>${laps}<Creator xsi:type="Device_t"><Name>Domestique</Name></Creator></Activity></Activities>
 </TrainingCenterDatabase>`;
 }

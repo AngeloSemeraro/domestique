@@ -29,7 +29,7 @@ export default function Footer() {
           <strong className="text-[color:var(--fg)]">
             Free software, built in the open.
           </strong>{" "}
-          Strava Batch Editor is given to you as-is, with no warranty.
+          Domestique is given to you as-is, with no warranty.
           It&apos;s a side project — please use at your own risk. If it saved
           you a click or two, share it with a riding buddy who&apos;d find it
           useful. Long live free software{" "}
