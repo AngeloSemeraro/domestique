@@ -34,7 +34,8 @@ import {
   type StreamedActivity,
   type TimingOptions,
 } from "@/lib/gpx";
-import { parseTrackFile, type ParsedTrack } from "@/lib/file-parsers";
+import type { ParsedTrack } from "@/lib/file-parsers";
+import { ActivitySourceBox, type LocalFile } from "./SourcePicker";
 
 const RIDE_SPORTS = new Set([
   "Ride",
@@ -45,14 +46,7 @@ const RIDE_SPORTS = new Set([
   "VirtualRide",
 ]);
 
-type FileSource = {
-  uid: string;
-  filename: string;
-  name: string;
-  start_date: string;
-  streams: Streams;
-  point_count: number;
-};
+type FileSource = LocalFile;
 
 type OutputMode = "strava" | "tcx" | "gpx";
 
@@ -85,21 +79,11 @@ export default function MergeTab({
     }
   ) => void;
 }) {
-  const today = new Date();
-  const ninetyAgo = new Date(Date.now() - 90 * 86400 * 1000);
-  const [after, setAfter] = useState(isoDay(ninetyAgo));
-  const [before, setBefore] = useState(isoDay(today));
-
-  const [activities, setActivities] = useState<StravaActivity[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [filesOpen, setFilesOpen] = useState(false);
-  const [ridesOpen, setRidesOpen] = useState(false);
-
+  // Selected Strava rides (full objects — the shared picker owns the list).
+  const [selectedActs, setSelectedActs] = useState<Map<number, StravaActivity>>(
+    new Map()
+  );
   const [files, setFiles] = useState<FileSource[]>([]);
-  const [fileError, setFileError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -111,85 +95,30 @@ export default function MergeTab({
   const [bypassDuplicate, setBypassDuplicate] = useState(false);
   const [step, setStep] = useState<Step>({ kind: "idle" });
 
-  async function load() {
-    setLoading(true);
-    setLoadError(null);
-    setActivities([]);
-    setSelectedIds(new Set());
-    try {
-      const afterTs = Math.floor(new Date(after).getTime() / 1000);
-      const beforeTs = Math.floor(
-        (new Date(before).getTime() + 86400 * 1000) / 1000
-      );
-      const all: StravaActivity[] = [];
-      let page = 1;
-      while (page <= 5) {
-        const qs = new URLSearchParams({
-          after: String(afterTs),
-          before: String(beforeTs),
-          page: String(page),
-        });
-        const res = await apiFetch(`/api/activities?${qs.toString()}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        if (!data.activities?.length) break;
-        all.push(...data.activities);
-        if (data.activities.length < 100) break;
-        page++;
-      }
-      setActivities(all.filter((a) => RIDE_SPORTS.has(a.sport_type)));
-    } catch (e) {
-      setLoadError(e instanceof Error ? e.message : "unknown");
-    } finally {
-      setLoading(false);
-    }
+  function toggleActivity(a: StravaActivity) {
+    setSelectedActs((prev) => {
+      const next = new Map(prev);
+      if (next.has(a.id)) next.delete(a.id);
+      else next.set(a.id, a);
+      return next;
+    });
   }
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function handleFileSelect(picked: FileList | null) {
-    if (!picked || picked.length === 0) return;
-    setFileError(null);
-    const added: FileSource[] = [];
-    const errors: string[] = [];
-    for (const f of Array.from(picked)) {
-      try {
-        const parsed = await parseTrackFile(f);
-        added.push({
-          uid: `${f.name}-${f.size}-${f.lastModified}`,
-          filename: f.name,
-          ...parsed,
-        });
-      } catch (e) {
-        errors.push(e instanceof Error ? e.message : `parse error: ${f.name}`);
-      }
-    }
+  function addFiles(added: FileSource[]) {
     setFiles((prev) => {
       const map = new Map(prev.map((p) => [p.uid, p]));
       for (const a of added) map.set(a.uid, a);
       return Array.from(map.values());
     });
-    if (errors.length) setFileError(errors.join(" · "));
-    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function removeFile(uid: string) {
     setFiles((prev) => prev.filter((f) => f.uid !== uid));
   }
 
-  function toggle(id: number) {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedIds(next);
-  }
-
   const selectedActivities = useMemo(
-    () => activities.filter((a) => selectedIds.has(a.id)),
-    [activities, selectedIds]
+    () => Array.from(selectedActs.values()),
+    [selectedActs]
   );
 
   type Source =
@@ -425,7 +354,7 @@ export default function MergeTab({
 
   function reset() {
     setStep({ kind: "idle" });
-    setSelectedIds(new Set());
+    setSelectedActs(new Map());
     setFiles([]);
     setName("");
     setDescription("");
@@ -485,223 +414,21 @@ export default function MergeTab({
       </section>
 
       <section className="animate-fade-in rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-4 md:p-5 shadow-sm">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => setFilesOpen((v) => !v)}
-            className="group flex flex-1 items-center gap-2 text-left"
-          >
-            <ChevronDown
-              className={`h-4 w-4 text-[color:var(--fg-muted)] transition-transform ${
-                filesOpen ? "" : "-rotate-90"
-              }`}
-            />
-            <h3 className="font-semibold tracking-tight">
-              Local files{" "}
-              <span className="text-xs font-normal text-[color:var(--fg-muted)]">
-                .gpx / .fit
-              </span>
-            </h3>
-            {files.length > 0 && (
-              <span className="rounded-full bg-[color:var(--row-hover)] px-2 py-0.5 text-xs text-[color:var(--fg-muted)]">
-                {files.length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-[color:var(--border)] px-3 py-1.5 text-sm transition-colors hover:border-strava hover:text-strava"
-          >
-            <FileUp className="h-3.5 w-3.5" />
-            Add file
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".gpx,.fit"
-            multiple
-            className="hidden"
-            onChange={(e) => handleFileSelect(e.target.files)}
-          />
-        </div>
-        {filesOpen && (files.length === 0 ? (
-          <p className="text-sm text-[color:var(--fg-muted)]">
-            No files added. Click <strong>Add file</strong> to include local
-            GPX/FIT tracks in the merge.
-          </p>
-        ) : (
-          <ul className="space-y-1.5">
-            {files.map((f) => (
-              <li
-                key={f.uid}
-                className="flex items-center gap-3 rounded-lg border border-[color:var(--border)] bg-[color:var(--bg-input)] px-3 py-2 text-sm"
-              >
-                <FileUp className="h-3.5 w-3.5 text-[color:var(--fg-muted)]" />
-                <span className="flex-1 truncate font-medium">{f.name}</span>
-                <span className="font-mono text-xs text-[color:var(--fg-muted)]">
-                  {f.point_count} pts ·{" "}
-                  {new Date(f.start_date).toLocaleString(undefined, {
-                    year: "2-digit",
-                    month: "short",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-                <button
-                  onClick={() => removeFile(f.uid)}
-                  className="text-[color:var(--fg-muted)] hover:text-red-500"
-                  aria-label="Remove"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        ))}
-        {fileError && (
-          <p className="mt-2 text-xs text-red-500">{fileError}</p>
-        )}
-      </section>
-
-      <section className="animate-fade-in rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-4 md:p-5 shadow-sm">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => setRidesOpen((v) => !v)}
-            className="flex flex-1 items-center gap-2 text-left"
-          >
-            <ChevronDown
-              className={`h-4 w-4 text-[color:var(--fg-muted)] transition-transform ${
-                ridesOpen ? "" : "-rotate-90"
-              }`}
-            />
-            <h3 className="font-semibold tracking-tight">Strava rides</h3>
-            {selectedIds.size > 0 && (
-              <span className="rounded-full bg-strava/10 px-2 py-0.5 text-xs font-medium text-strava">
-                {selectedIds.size} selected
-              </span>
-            )}
-            {activities.length > 0 && (
-              <span className="rounded-full bg-[color:var(--row-hover)] px-2 py-0.5 text-xs text-[color:var(--fg-muted)]">
-                {activities.length} loaded
-              </span>
-            )}
-          </button>
-        </div>
-        {ridesOpen && (
-        <>
-        <div className="mb-3 flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1 text-xs">
-            <span className="text-[color:var(--fg-muted)]">From</span>
-            <input
-              type="date"
-              value={after}
-              onChange={(e) => setAfter(e.target.value)}
-              className="rounded-lg border border-[color:var(--border)] bg-[color:var(--bg-input)] px-2.5 py-1.5 text-sm"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs">
-            <span className="text-[color:var(--fg-muted)]">To</span>
-            <input
-              type="date"
-              value={before}
-              onChange={(e) => setBefore(e.target.value)}
-              className="rounded-lg border border-[color:var(--border)] bg-[color:var(--bg-input)] px-2.5 py-1.5 text-sm"
-            />
-          </label>
-          <button
-            onClick={load}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-full bg-strava px-4 py-1.5 text-sm font-semibold text-white shadow-sm shadow-strava/30 transition-all hover:scale-[1.02] disabled:opacity-50"
-          >
-            {loading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3.5 w-3.5" />
-            )}
-            {loading ? "Loading…" : "Reload"}
-          </button>
-          {loadError && (
-            <span className="text-sm text-red-500">{loadError}</span>
-          )}
-          <span className="ml-auto text-sm text-[color:var(--fg-muted)]">
-            <span className="font-semibold text-[color:var(--fg)]">
-              {activities.length}
-            </span>{" "}
-            rides ·{" "}
-            <span className="font-semibold text-[color:var(--fg)]">
-              {selectedIds.size}
-            </span>{" "}
-            selected
-          </span>
-        </div>
-
-        <div className="overflow-x-auto rounded-xl border border-[color:var(--border)]">
-          <table className="min-w-full text-sm">
-            <thead className="border-b border-[color:var(--border)]">
-              <tr className="text-left text-xs uppercase tracking-wider text-[color:var(--fg-muted)]">
-                <th className="p-2.5 w-8"></th>
-                <th className="p-2.5 font-medium">Date</th>
-                <th className="p-2.5 font-medium">Name</th>
-                <th className="p-2.5 font-medium">Sport</th>
-                <th className="p-2.5 font-medium">Distance</th>
-                <th className="p-2.5 font-medium">Duration</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activities.map((a) => (
-                <tr
-                  key={a.id}
-                  onClick={() => toggle(a.id)}
-                  className={`cursor-pointer border-b border-[color:var(--border)] transition-colors hover:bg-[color:var(--row-hover)] ${
-                    selectedIds.has(a.id) ? "bg-strava/5" : ""
-                  }`}
-                >
-                  <td className="p-2.5">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(a.id)}
-                      onChange={() => toggle(a.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="accent-strava"
-                    />
-                  </td>
-                  <td className="p-2.5 whitespace-nowrap text-[color:var(--fg-muted)]">
-                    {a.start_date_local.slice(0, 10)}{" "}
-                    <span className="text-[color:var(--fg-muted)]/70">
-                      {a.start_date_local.slice(11, 16)}
-                    </span>
-                  </td>
-                  <td className="p-2.5">{a.name}</td>
-                  <td className="p-2.5">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--row-hover)] px-2 py-0.5 text-xs">
-                      <Bike className="h-3 w-3" /> {a.sport_type}
-                    </span>
-                  </td>
-                  <td className="p-2.5 whitespace-nowrap font-mono text-xs">
-                    {(a.distance / 1000).toFixed(1)} km
-                  </td>
-                  <td className="p-2.5 whitespace-nowrap font-mono text-xs text-[color:var(--fg-muted)]">
-                    {formatDuration(a.moving_time)}
-                  </td>
-                </tr>
-              ))}
-              {!loading && activities.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="p-8 text-center text-[color:var(--fg-muted)]"
-                  >
-                    No rides in this range.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        </>
-        )}
+        <h3 className="font-semibold tracking-tight">Sources</h3>
+        <p className="mb-3 text-sm text-[color:var(--fg-muted)]">
+          Pick at least two — Strava rides and/or local .gpx / .fit files, in
+          any mix.
+        </p>
+        <ActivitySourceBox
+          mode="multi"
+          stravaFilter={(a) => RIDE_SPORTS.has(a.sport_type)}
+          selectedActivityIds={new Set(selectedActs.keys())}
+          onToggleActivity={toggleActivity}
+          files={files}
+          onFilesAdded={addFiles}
+          onFileRemoved={removeFile}
+          emptyHint="No rides in this range (only GPS ride types are listed)."
+        />
       </section>
 
       {sources.length >= 2 && (

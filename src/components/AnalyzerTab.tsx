@@ -29,9 +29,15 @@ import {
   type Streams,
   type StreamedActivity,
 } from "@/lib/gpx";
-import { parseTrackFile, type ParsedTrack } from "@/lib/file-parsers";
+import type { ParsedTrack } from "@/lib/file-parsers";
+import { fetchActivityStreams } from "@/lib/export-client";
 import ElevationProfile from "./ElevationProfile";
 import TrackMap from "./TrackMapLazy";
+import {
+  ActivitySourceBox,
+  type LocalFile,
+  type SourcePick,
+} from "./SourcePicker";
 
 type Step =
   | { kind: "idle" }
@@ -66,8 +72,10 @@ export default function AnalyzerTab({
   const [description, setDescription] = useState("");
   const [bypassDuplicate, setBypassDuplicate] = useState(false);
   const [step, setStep] = useState<Step>({ kind: "idle" });
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [dragOver, setDragOver] = useState(false);
+  // Files added through the unified source box (kept so the user can switch
+  // between them after Clear).
+  const [pickerFiles, setPickerFiles] = useState<LocalFile[]>([]);
+  const [sourceLoading, setSourceLoading] = useState<string | null>(null);
   // Shared hover / zoom state mirrored between the map, the elevation
   // profile and the stream charts. viewRange null = full track.
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
@@ -92,22 +100,40 @@ export default function AnalyzerTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seed]);
 
-  async function handleFile(picked: FileList | null) {
-    if (!picked || picked.length === 0) return;
+  function loadParsed(parsed: ParsedTrack, filename: string) {
     setParseError(null);
     setStep({ kind: "idle" });
-    try {
-      const f = picked[0];
-      const parsed = await parseTrackFile(f);
-      setFile({ ...parsed, filename: f.name });
-      setName(parsed.name);
-      setViewRange(null);
-      setHoverIdx(null);
-    } catch (e) {
-      setParseError(e instanceof Error ? e.message : "parse error");
-      setFile(null);
+    setFile({ ...parsed, filename });
+    setName(parsed.name);
+    setViewRange(null);
+    setHoverIdx(null);
+  }
+
+  async function handlePick(pick: SourcePick) {
+    setParseError(null);
+    if (pick.kind === "file") {
+      loadParsed(pick.file, pick.file.filename);
+      return;
     }
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    const a = pick.activity;
+    setSourceLoading(a.name);
+    try {
+      const streams = await fetchActivityStreams(a.id);
+      loadParsed(
+        {
+          name: a.name,
+          start_date: a.start_date,
+          streams,
+          point_count: streams.latlng?.data?.length ?? 0,
+          has_time: true,
+        },
+        `${a.name} (Strava activity ${a.id})`
+      );
+    } catch (e) {
+      setParseError(e instanceof Error ? e.message : "failed to load streams");
+    } finally {
+      setSourceLoading(null);
+    }
   }
 
   const analysis = useMemo(() => {
@@ -229,69 +255,42 @@ export default function AnalyzerTab({
           <div className="flex-1">
             <h2 className="font-semibold tracking-tight">Inspector</h2>
             <p className="text-sm text-[color:var(--fg-muted)]">
-              Inspect a track, tune the movement filter live, then download
-              the cleaned GPX or publish it straight to Strava.
+              Pick one of your Strava rides or a local .gpx / .fit file,
+              explore it on the map and elevation profile, tune the movement
+              filter live, then download the cleaned file or publish it
+              straight to Strava.
             </p>
           </div>
         </div>
 
         {!file && (
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            onDragEnter={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setDragOver(true);
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
-              setDragOver(true);
-            }}
-            onDragLeave={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setDragOver(false);
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setDragOver(false);
-              handleFile(e.dataTransfer.files);
-            }}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                fileInputRef.current?.click();
+          <>
+            <ActivitySourceBox
+              mode="single"
+              files={pickerFiles}
+              onFilesAdded={(added) => {
+                setPickerFiles((prev) => {
+                  const map = new Map(prev.map((f) => [f.uid, f]));
+                  for (const f of added) map.set(f.uid, f);
+                  return Array.from(map.values());
+                });
+                // Dropping a single file means "inspect this one" — load it.
+                if (added.length === 1) handlePick({ kind: "file", file: added[0] });
+              }}
+              onFileRemoved={(uid) =>
+                setPickerFiles((prev) => prev.filter((f) => f.uid !== uid))
               }
-            }}
-            className={`flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-10 transition-colors ${
-              dragOver
-                ? "border-strava bg-strava/5 text-strava"
-                : "border-[color:var(--border)] hover:border-strava hover:text-strava"
-            }`}
-          >
-            <FileUp className="h-6 w-6" />
-            <span className="text-sm font-medium">
-              {dragOver
-                ? "Drop to load"
-                : "Drop or click to pick a .gpx / .fit"}
-            </span>
-            <span className="text-xs text-[color:var(--fg-muted)]">
-              Parsed entirely in your browser; nothing is uploaded yet.
-            </span>
-          </div>
+              onPick={handlePick}
+              emptyHint="No activities in this range."
+            />
+            {sourceLoading && (
+              <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-[color:var(--fg-muted)]">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Loading “{sourceLoading}” from Strava…
+              </p>
+            )}
+          </>
         )}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".gpx,.fit"
-          className="hidden"
-          onChange={(e) => handleFile(e.target.files)}
-        />
         {parseError && (
           <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-red-500">
             <AlertCircle className="h-3.5 w-3.5" />

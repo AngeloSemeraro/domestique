@@ -4,7 +4,7 @@ Tags: strava, cycling, gpx, tcx, fit, batch edit, merge
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 0.3.0
+Stable tag: 0.4.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -16,9 +16,9 @@ Strava Batch Editor brings the open-source [Strava Batch Editor](https://github.
 
 Three tools in one:
 
-* **Batch edit** — rename, change sport type, gear, hide-from-feed, trainer, commute on many activities at once. Plus **batch export**: send the selected activities to your **RideWithGPS** library (optional OAuth integration) or download them all as a **GPX zip** — handy for importing into Komoot, which has no public upload API, via its multi-file upload page.
+* **Batch edit** — rename, change sport type, gear, hide-from-feed, trainer, commute on many activities at once. The activities list has **Strava rides and Local files tabs**; the **Send / export** section uploads the selection to your **RideWithGPS** library (optional OAuth integration) or downloads it as a **GPX or FIT zip** — handy for importing into Komoot (no public upload API) via its multi-file upload page.
 * **Merge rides** — combine multiple rides (Strava activities and/or local `.gpx` / `.fit` files) into one new activity, with movement filtering that drops train/car stretches.
-* **Inspector** — load a single `.gpx` / `.fit` and explore it on an interactive map with togglable waypoints, plus a detailed elevation profile colored by gradient (Wahoo ELEMNT-style bands). Hover is mirrored between the profile and the map; drag a range (or scroll) on the profile to zoom in, audio-editor style, and the map follows. Tune the movement filter live with kept/dropped charts, then publish or download. Files without timestamps (route exports) load fine — times are synthesized automatically.
+* **Inspector** — pick one of your Strava rides or load a single `.gpx` / `.fit` and explore it on an interactive map with togglable waypoints, plus a detailed elevation profile colored by gradient (Wahoo ELEMNT-style bands). Hover is mirrored between the profile and the map; drag a range (or scroll) on the profile to zoom in, audio-editor style, and the map follows. Tune the movement filter live with kept/dropped charts, then publish or download. Files without timestamps (route exports) load fine — times are synthesized automatically.
 
 Outputs both **TCX** (recommended for Strava — carries the real distance odometer that skips unrecorded transfers) and **GPX**.
 
@@ -70,6 +70,10 @@ Strava limits API requests per app. If many users use the plugin heavily on the 
 
 Use the **TCX** output (default in the plugin) — it carries the real distance, so Strava doesn't recompute and inflate it from GPS points across unrecorded transfers between source rides.
 
+= Can it upload to Komoot too? =
+
+No — Komoot has no public API and third-party integrations require a partner agreement with them, so direct upload isn't possible without breaking their terms. The "Upload to Komoot" button explains this; use **Download GPX/FIT (zip)** and drop all the files onto komoot.com/upload in one go instead.
+
 == Vibe coded with Claude ==
 
 This whole thing was vibe coded using Claude Code. I'm not a developer and I don't read the code — I described what I wanted, tested the result in the browser, and shipped what worked. You should know what you're installing: this is AI-generated software, maintained by one person in their spare time who can't debug it line by line.
@@ -85,11 +89,14 @@ Provided **as is**, with no warranty of any kind (see GPLv3 sections 15-16 for t
 
 Not affiliated with Strava, Inc.
 
-= Can it upload to Komoot too? =
-
-No — Komoot has no public API and third-party integrations require a partner agreement with them, so direct upload isn't possible without breaking their terms. Instead, use **Download GPX (zip)** in the Batch edit tab and drop all the files onto komoot.com/upload in one go.
-
 == Changelog ==
+
+= 0.4.0 =
+* All three tabs share one "sources" box with Strava rides / Local files tabs: batch-edit exports, merge sources and the Inspector all accept both.
+* Batch edit: activities list moved above the edit/export cards; local files join Send / export.
+* New **Download FIT (zip)** export (built-in FIT encoder) next to Download GPX.
+* Explicit "Upload to Komoot" button (always disabled — Komoot has no public API; the tooltip explains the zip → komoot.com/upload flow).
+* Inspector can open a Strava ride directly (streams fetched on pick).
 
 = 0.3.0 =
 * Batch edit tab: new "Send / export" section — export selected activities as GPX exactly as recorded.
@@ -107,6 +114,9 @@ No — Komoot has no public API and third-party integrations require a partner a
 * Initial release: OAuth, settings page, REST proxy, shortcodes, React bundle.
 
 == Upgrade Notice ==
+
+= 0.4.0 =
+Unified Strava + local file sources in all tabs, FIT zip export, Batch edit layout rework. Rebuild the React bundle when updating from source.
 
 = 0.3.0 =
 Batch edit gets "Send / export": batch upload to RideWithGPS (optional, per-user OAuth) and batch GPX zip download. Rebuild the React bundle when updating from source.

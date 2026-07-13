@@ -28,22 +28,25 @@ Select many activities at once and change them in a single pass:
 Filter the list by date range (quick-range chips: 30d / 90d / 6m / 1y / YTD /
 All), sport, name and location.
 
-**Send / export** the selected activities anywhere:
-- **Send to RideWithGPS** — connect your RideWithGPS account (OAuth) and
-  upload the selected activities to your library in one batch. Optional:
-  needs a free [RideWithGPS API client](https://ridewithgps.com/api/v1/doc)
-  configured once (see setup below).
-- **Download GPX (zip)** — every selected activity as a GPX file, exactly as
-  recorded, in a single zip. Works with no setup. This is also the
-  **Komoot** route: Komoot has [no public upload API](https://support.komoot.com/hc/en-us/articles/10331570510618-komoot-API)
+The activities list has two tabs — **Strava rides** and **Local files**
+(.gpx/.fit) — and the selection from both feeds **Send / export**:
+- **Download GPX (zip)** / **Download FIT (zip)** — every selected activity,
+  exactly as recorded, in a single zip (FIT files come from a built-in
+  encoder). Works with no setup. This is also the **Komoot** route: Komoot
+  has [no public upload API](https://support.komoot.com/hc/en-us/articles/10331570510618-komoot-API)
   (partner integrations only, and its private API is off-limits per their
   terms), but <https://www.komoot.com/upload> accepts many files at once —
-  download the zip, drop the files there, done.
+  download the zip, drop the files there, done. The disabled "Upload to
+  Komoot" button in the UI says exactly this.
+- **Upload to RideWithGPS** — connect your RideWithGPS account (OAuth) and
+  upload the selection to your library in one batch. Optional: needs a free
+  [RideWithGPS API client](https://ridewithgps.com/api/v1/doc) configured
+  once (see setup below).
 
 ### 🔀 Merge rides
 Combine multiple rides into one new activity:
 - Sources can be **Strava activities and/or local `.gpx` / `.fit` files**, in
-  any mix
+  any mix, picked from one unified box (same in all three tabs)
 - **Movement filter** drops non-cycling stretches (long pauses, a train/car
   transfer between sessions) using speed + cadence + heart-rate signals, so the
   merged ride only contains the parts you actually rode
@@ -53,7 +56,8 @@ Combine multiple rides into one new activity:
   carries the real distance odometer so the total is correct) or **GPX**
 
 ### 🔍 Inspector
-Drop a single `.gpx` / `.fit` (or send the merge result here) to:
+Pick one of your Strava rides, drop a single `.gpx` / `.fit` (or send the
+merge result here) to:
 - **explore the track on an interactive map** (OpenStreetMap) with start/end
   markers, filter-dropped segments dashed, and **togglable waypoints** (GPX
   `<wpt>` / FIT course points)
@@ -138,7 +142,8 @@ RWGPS_API_KEY=
 In the WordPress plugin the same credentials go in **Settings → Strava Batch
 Editor** (redirect URI is shown on that page). Each user then connects their
 own RideWithGPS account from the Batch edit tab. Without credentials the
-button is hidden — the GPX zip download always works.
+upload button stays disabled (its tooltip says why) — the GPX/FIT zip
+downloads always work.
 
 ---
 
