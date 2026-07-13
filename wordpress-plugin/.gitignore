@@ -1,6 +1,6 @@
 node_modules/
 dist/
 *.log
-strava-batch-editor/assets/js/
-strava-batch-editor/assets/css/
+domestique/assets/js/
+domestique/assets/css/
 package-lock.json
