@@ -16,7 +16,7 @@ const secret = process.env.SESSION_SECRET ?? "";
 
 export const sessionOptions: SessionOptions = {
   password: secret,
-  cookieName: "strava_batch_session",
+  cookieName: "domestique_session",
   cookieOptions: {
     httpOnly: true,
     sameSite: "lax",

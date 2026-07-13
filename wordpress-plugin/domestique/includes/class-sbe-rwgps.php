@@ -10,9 +10,9 @@
  * RWGPS API specifics are centralized here; official docs:
  * https://ridewithgps.com/api/v1/doc — the site admin registers an API
  * client on their RideWithGPS account and pastes the credentials in
- * Settings → Strava Batch Editor.
+ * Settings → Domestique.
  *
- * @package StravaBatchEditor
+ * @package Domestique
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -97,7 +97,7 @@ final class SBE_RWGPS {
 			exit;
 		}
 		if ( ! self::is_configured() ) {
-			wp_die( esc_html__( 'RideWithGPS is not configured (Settings → Strava Batch Editor).', 'strava-batch-editor' ) );
+			wp_die( esc_html__( 'RideWithGPS is not configured (Settings → Domestique).', 'domestique' ) );
 		}
 		$settings = SBE_Plugin::get_settings();
 		$state    = wp_generate_password( 24, false );
@@ -130,7 +130,7 @@ final class SBE_RWGPS {
 			delete_transient( 'sbe_rwgps_state_' . $state );
 		}
 		if ( ! is_array( $state_data ) || ! isset( $state_data['user_id'] ) ) {
-			wp_die( esc_html__( 'Invalid OAuth state. Please start the RideWithGPS connection again.', 'strava-batch-editor' ) );
+			wp_die( esc_html__( 'Invalid OAuth state. Please start the RideWithGPS connection again.', 'domestique' ) );
 		}
 		$return = is_string( $state_data['return'] ?? null ) ? $this->safe_return( (string) $state_data['return'] ) : home_url( '/' );
 

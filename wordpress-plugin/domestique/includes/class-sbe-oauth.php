@@ -12,7 +12,7 @@
  * Logout / revoke / me stay on the REST API because they're hit via
  * fetch() from the React bundle with the X-WP-Nonce header.
  *
- * @package StravaBatchEditor
+ * @package Domestique
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -87,7 +87,7 @@ final class SBE_OAuth {
 			exit;
 		}
 		if ( ! SBE_Plugin::is_configured() ) {
-			wp_die( esc_html__( 'Strava Batch Editor is not configured (Settings → Strava Batch Editor).', 'strava-batch-editor' ) );
+			wp_die( esc_html__( 'Domestique is not configured (Settings → Domestique).', 'domestique' ) );
 		}
 		$settings = SBE_Plugin::get_settings();
 		$state    = wp_generate_password( 24, false );
@@ -122,7 +122,7 @@ final class SBE_OAuth {
 			delete_transient( 'sbe_oauth_state_' . $state );
 		}
 		if ( ! is_array( $state_data ) || ! isset( $state_data['user_id'] ) ) {
-			wp_die( esc_html__( 'Invalid OAuth state. Please start the connection again.', 'strava-batch-editor' ) );
+			wp_die( esc_html__( 'Invalid OAuth state. Please start the connection again.', 'domestique' ) );
 		}
 		$return = is_string( $state_data['return'] ?? null ) ? $this->safe_return( (string) $state_data['return'] ) : home_url( '/' );
 

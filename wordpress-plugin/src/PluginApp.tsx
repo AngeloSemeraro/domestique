@@ -64,7 +64,7 @@ export default function PluginApp({ tab: scTab }: { tab: ShortcodeTab }) {
             <AppLogo size={40} />
             <div>
               <h1 className="text-xl font-bold tracking-tight">
-                Strava Batch Editor
+                Domestique
               </h1>
               <p className="text-xs text-[color:var(--fg-muted)]">
                 {me.athlete.name}

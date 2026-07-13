@@ -227,7 +227,7 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
           body: JSON.stringify({
             gpx,
             name: s.name,
-            description: `Exported via Strava Batch Editor${s.id > 0 ? ` (Strava activity ${s.id})` : ""}`,
+            description: `Exported via Domestique${s.id > 0 ? ` (Strava activity ${s.id})` : ""}`,
           }),
         });
         const data = await res.json().catch(() => ({}));
@@ -1136,7 +1136,7 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
             free RideWithGPS API client and adds its credentials — see the
             README (Next.js: <code>RWGPS_CLIENT_ID</code> /{" "}
             <code>RWGPS_CLIENT_SECRET</code> in <code>.env.local</code>;
-            WordPress: Settings → Strava Batch Editor). The GPX zip download
+            WordPress: Settings → Domestique). The GPX zip download
             works without any setup.
           </p>
         )}

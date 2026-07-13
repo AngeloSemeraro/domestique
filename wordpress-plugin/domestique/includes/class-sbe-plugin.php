@@ -2,7 +2,7 @@
 /**
  * Plugin bootstrap: registers WordPress hooks for all subsystems.
  *
- * @package StravaBatchEditor
+ * @package Domestique
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -32,7 +32,7 @@ final class SBE_Plugin {
 
 	public function load_textdomain(): void {
 		load_plugin_textdomain(
-			'strava-batch-editor',
+			'domestique',
 			false,
 			dirname( plugin_basename( SBE_PLUGIN_FILE ) ) . '/languages'
 		);

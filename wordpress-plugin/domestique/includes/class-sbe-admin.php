@@ -3,7 +3,7 @@
  * wp-admin settings page where the site owner pastes their Strava
  * Client ID / Client Secret. One-time setup per site.
  *
- * @package StravaBatchEditor
+ * @package Domestique
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -24,10 +24,10 @@ final class SBE_Admin {
 
 	public function add_menu(): void {
 		add_options_page(
-			__( 'Strava Batch Editor', 'strava-batch-editor' ),
-			__( 'Strava Batch Editor', 'strava-batch-editor' ),
+			__( 'Domestique', 'domestique' ),
+			__( 'Domestique', 'domestique' ),
 			'manage_options',
-			'strava-batch-editor',
+			'domestique',
 			array( $this, 'render_page' )
 		);
 	}
@@ -65,29 +65,29 @@ final class SBE_Admin {
 		$host         = wp_parse_url( home_url(), PHP_URL_HOST );
 		?>
 		<div class="wrap">
-			<h1><?php esc_html_e( 'Strava Batch Editor', 'strava-batch-editor' ); ?></h1>
+			<h1><?php esc_html_e( 'Domestique', 'domestique' ); ?></h1>
 
 			<div style="background:#fff;border:1px solid #ccd0d4;padding:16px;margin:16px 0;max-width:780px;">
-				<h2 style="margin-top:0"><?php esc_html_e( 'One-time setup', 'strava-batch-editor' ); ?></h2>
+				<h2 style="margin-top:0"><?php esc_html_e( 'One-time setup', 'domestique' ); ?></h2>
 				<ol>
 					<li>
 						<?php
 						printf(
 							/* translators: %s: link to Strava API portal */
-							wp_kses_post( __( 'Open the %s.', 'strava-batch-editor' ) ),
+							wp_kses_post( __( 'Open the %s.', 'domestique' ) ),
 							'<a href="https://www.strava.com/settings/api" target="_blank" rel="noreferrer">Strava API portal</a>'
 						);
 						?>
 					</li>
-					<li><?php esc_html_e( 'Click "Create & Manage Your App" and fill in the form. Category: Other.', 'strava-batch-editor' ); ?></li>
+					<li><?php esc_html_e( 'Click "Create & Manage Your App" and fill in the form. Category: Other.', 'domestique' ); ?></li>
 					<li>
-						<?php esc_html_e( 'Set the Authorization Callback Domain to:', 'strava-batch-editor' ); ?>
+						<?php esc_html_e( 'Set the Authorization Callback Domain to:', 'domestique' ); ?>
 						<code><?php echo esc_html( $host ); ?></code>
 					</li>
-					<li><?php esc_html_e( 'After saving, copy the Client ID and Client Secret here below.', 'strava-batch-editor' ); ?></li>
+					<li><?php esc_html_e( 'After saving, copy the Client ID and Client Secret here below.', 'domestique' ); ?></li>
 				</ol>
 				<p>
-					<strong><?php esc_html_e( 'Redirect URI for reference:', 'strava-batch-editor' ); ?></strong><br>
+					<strong><?php esc_html_e( 'Redirect URI for reference:', 'domestique' ); ?></strong><br>
 					<code><?php echo esc_html( $redirect_uri ); ?></code>
 				</p>
 			</div>
@@ -98,7 +98,7 @@ final class SBE_Admin {
 					<tbody>
 						<tr>
 							<th scope="row">
-								<label for="sbe_client_id"><?php esc_html_e( 'Strava Client ID', 'strava-batch-editor' ); ?></label>
+								<label for="sbe_client_id"><?php esc_html_e( 'Strava Client ID', 'domestique' ); ?></label>
 							</th>
 							<td>
 								<input
@@ -113,7 +113,7 @@ final class SBE_Admin {
 						</tr>
 						<tr>
 							<th scope="row">
-								<label for="sbe_client_secret"><?php esc_html_e( 'Strava Client Secret', 'strava-batch-editor' ); ?></label>
+								<label for="sbe_client_secret"><?php esc_html_e( 'Strava Client Secret', 'domestique' ); ?></label>
 							</th>
 							<td>
 								<input
@@ -125,22 +125,22 @@ final class SBE_Admin {
 									autocomplete="off"
 								/>
 								<p class="description">
-									<?php esc_html_e( 'Stored in the wp_options table and never sent anywhere except to Strava.', 'strava-batch-editor' ); ?>
+									<?php esc_html_e( 'Stored in the wp_options table and never sent anywhere except to Strava.', 'domestique' ); ?>
 								</p>
 							</td>
 						</tr>
 						<tr>
 							<th scope="row" colspan="2" style="padding-bottom:0;">
-								<h2 style="margin:1em 0 0;"><?php esc_html_e( 'RideWithGPS (optional)', 'strava-batch-editor' ); ?></h2>
+								<h2 style="margin:1em 0 0;"><?php esc_html_e( 'RideWithGPS (optional)', 'domestique' ); ?></h2>
 								<p style="font-weight:normal;">
-									<?php esc_html_e( 'Enables "Send to RideWithGPS" in the Batch edit tab. Register a free API client on your RideWithGPS account (ridewithgps.com/api) and set its redirect URI to:', 'strava-batch-editor' ); ?>
+									<?php esc_html_e( 'Enables "Send to RideWithGPS" in the Batch edit tab. Register a free API client on your RideWithGPS account (ridewithgps.com/api) and set its redirect URI to:', 'domestique' ); ?>
 									<br><code><?php echo esc_html( SBE_RWGPS::redirect_uri() ); ?></code>
 								</p>
 							</th>
 						</tr>
 						<tr>
 							<th scope="row">
-								<label for="sbe_rwgps_client_id"><?php esc_html_e( 'RideWithGPS Client ID', 'strava-batch-editor' ); ?></label>
+								<label for="sbe_rwgps_client_id"><?php esc_html_e( 'RideWithGPS Client ID', 'domestique' ); ?></label>
 							</th>
 							<td>
 								<input
@@ -155,7 +155,7 @@ final class SBE_Admin {
 						</tr>
 						<tr>
 							<th scope="row">
-								<label for="sbe_rwgps_client_secret"><?php esc_html_e( 'RideWithGPS Client Secret', 'strava-batch-editor' ); ?></label>
+								<label for="sbe_rwgps_client_secret"><?php esc_html_e( 'RideWithGPS Client Secret', 'domestique' ); ?></label>
 							</th>
 							<td>
 								<input
@@ -170,7 +170,7 @@ final class SBE_Admin {
 						</tr>
 						<tr>
 							<th scope="row">
-								<label for="sbe_rwgps_api_key"><?php esc_html_e( 'RideWithGPS API key', 'strava-batch-editor' ); ?></label>
+								<label for="sbe_rwgps_api_key"><?php esc_html_e( 'RideWithGPS API key', 'domestique' ); ?></label>
 							</th>
 							<td>
 								<input
@@ -182,7 +182,7 @@ final class SBE_Admin {
 									autocomplete="off"
 								/>
 								<p class="description">
-									<?php esc_html_e( 'Only needed when it differs from the Client ID — leave empty otherwise.', 'strava-batch-editor' ); ?>
+									<?php esc_html_e( 'Only needed when it differs from the Client ID — leave empty otherwise.', 'domestique' ); ?>
 								</p>
 							</td>
 						</tr>
@@ -192,17 +192,17 @@ final class SBE_Admin {
 			</form>
 
 			<div style="background:#fff;border:1px solid #ccd0d4;padding:16px;margin:16px 0;max-width:780px;">
-				<h2 style="margin-top:0"><?php esc_html_e( 'Use it on any page', 'strava-batch-editor' ); ?></h2>
-				<p><?php esc_html_e( 'Drop one of these shortcodes into any page or post:', 'strava-batch-editor' ); ?></p>
+				<h2 style="margin-top:0"><?php esc_html_e( 'Use it on any page', 'domestique' ); ?></h2>
+				<p><?php esc_html_e( 'Drop one of these shortcodes into any page or post:', 'domestique' ); ?></p>
 				<ul>
-					<li><code>[strava_batch_editor]</code> — <?php esc_html_e( 'full app (all three tabs)', 'strava-batch-editor' ); ?></li>
-					<li><code>[strava_batch_editor tab="edit"]</code> — <?php esc_html_e( 'Batch edit only', 'strava-batch-editor' ); ?></li>
-					<li><code>[strava_batch_editor tab="merge"]</code> — <?php esc_html_e( 'Merge rides only', 'strava-batch-editor' ); ?></li>
-					<li><code>[strava_batch_editor tab="inspector"]</code> — <?php esc_html_e( 'Inspector only', 'strava-batch-editor' ); ?></li>
-					<li><code>[strava_batch_editor_login]</code> — <?php esc_html_e( 'just the Connect with Strava button', 'strava-batch-editor' ); ?></li>
+					<li><code>[domestique]</code> — <?php esc_html_e( 'full app (all three tabs)', 'domestique' ); ?></li>
+					<li><code>[domestique tab="edit"]</code> — <?php esc_html_e( 'Batch edit only', 'domestique' ); ?></li>
+					<li><code>[domestique tab="merge"]</code> — <?php esc_html_e( 'Merge rides only', 'domestique' ); ?></li>
+					<li><code>[domestique tab="inspector"]</code> — <?php esc_html_e( 'Inspector only', 'domestique' ); ?></li>
+					<li><code>[domestique_login]</code> — <?php esc_html_e( 'just the Connect with Strava button', 'domestique' ); ?></li>
 				</ul>
 				<p>
-					<?php esc_html_e( 'Each logged-in WordPress user connects their own Strava account.', 'strava-batch-editor' ); ?>
+					<?php esc_html_e( 'Each logged-in WordPress user connects their own Strava account.', 'domestique' ); ?>
 				</p>
 			</div>
 		</div>

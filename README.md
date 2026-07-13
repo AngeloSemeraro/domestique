@@ -1,11 +1,13 @@
 <div align="center">
 
-<img src="public/icon.png" width="96" alt="Strava Batch Editor logo" />
+<img src="public/icon.png" width="96" alt="Domestique logo" />
 
-# Strava Batch Editor
+# Domestique
 
-Edit, merge and clean up your Strava rides in bulk — runs entirely on
-your own machine, talks only to your own Strava account.
+A *domestique* does the hard work so the team captain doesn't have to.
+This one does it for your rides: **batch edit, merge, inspect and export
+your Strava activities** — running entirely on your own machine, talking
+only to your own Strava account.
 
 **Free software (GPLv3) · self-hosted · no servers, no tracking, no accounts.**
 
@@ -94,8 +96,8 @@ live only in a local `.env.local` file, and nothing is ever sent to a third
 party. You need [Node.js 18+](https://nodejs.org) and a Strava account.
 
 ```bash
-git clone https://github.com/AngeloSemeraro/strava_batch_editor.git
-cd strava_batch_editor
+git clone https://github.com/AngeloSemeraro/domestique.git
+cd domestique
 npm install
 npm run dev
 ```
@@ -139,8 +141,8 @@ RWGPS_CLIENT_SECRET=...
 RWGPS_API_KEY=
 ```
 
-In the WordPress plugin the same credentials go in **Settings → Strava Batch
-Editor** (redirect URI is shown on that page). Each user then connects their
+In the WordPress plugin the same credentials go in **Settings → Domestique**
+(redirect URI is shown on that page). Each user then connects their
 own RideWithGPS account from the Batch edit tab. Without credentials the
 upload button stays disabled (its tooltip says why) — the GPX/FIT zip
 downloads always work.
@@ -167,32 +169,32 @@ don't want to run Node locally.
 | Where it runs | Your computer (`npm run dev`) | Your WordPress site |
 | Login | Browser cookie session | Standard WordPress login |
 | Multi-user | Single user per install | Each WP user connects their own Strava |
-| Access | `localhost:3000` | Any page with `[strava_batch_editor]` |
+| Access | `localhost:3000` | Any page with `[domestique]` |
 
 **Shortcodes** the plugin exposes:
 
 ```
-[strava_batch_editor]                     full app, all three tabs
-[strava_batch_editor tab="edit"]          Batch edit only
-[strava_batch_editor tab="merge"]         Merge rides only
-[strava_batch_editor tab="inspector"]     Inspector only
-[strava_batch_editor_login]               just the Connect with Strava button
+[domestique]                     full app, all three tabs
+[domestique tab="edit"]          Batch edit only
+[domestique tab="merge"]         Merge rides only
+[domestique tab="inspector"]     Inspector only
+[domestique_login]               just the Connect with Strava button
 ```
 
 **Get it:**
 
-- Pre-built installable ZIPs land on the [Releases page](https://github.com/AngeloSemeraro/strava_batch_editor/releases)
+- Pre-built installable ZIPs land on the [Releases page](https://github.com/AngeloSemeraro/domestique/releases)
 - Or build from source — the plugin lives under [`wordpress-plugin/`](wordpress-plugin/):
 
   ```bash
-  git clone https://github.com/AngeloSemeraro/strava_batch_editor.git
-  cd strava_batch_editor/wordpress-plugin
+  git clone https://github.com/AngeloSemeraro/domestique.git
+  cd domestique/wordpress-plugin
   npm install && npm run build
-  zip -r strava-batch-editor.zip strava-batch-editor -x "*.DS_Store"
+  zip -r domestique.zip domestique -x "*.DS_Store"
   ```
 
   Then in WordPress: **Plugins → Add New → Upload Plugin** → pick the zip →
-  **Activate** → **Settings → Strava Batch Editor** to paste your Strava API
+  **Activate** → **Settings → Domestique** to paste your Strava API
   credentials. See [`wordpress-plugin/README.md`](wordpress-plugin/README.md)
   for the full architecture (PHP backend, REST endpoints, OAuth flow).
 
@@ -230,7 +232,7 @@ by one person in their spare time who can't debug it line by line.
 
 ## ⚠️ As-is, no support
 
-Strava Batch Editor is provided **as is**, with no warranty of any kind
+Domestique is provided **as is**, with no warranty of any kind
 (see GPLv3 sections 15-16 for the legal text). In plain English:
 
 - **No guaranteed updates.** If Strava changes its API, this tool may

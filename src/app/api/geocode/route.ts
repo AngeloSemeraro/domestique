@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   const res = await fetch(url, {
     headers: {
-      "User-Agent": "strava-batch-editor/0.1 (https://github.com/AngeloSemeraro/strava_batch_editor)",
+      "User-Agent": "domestique/0.1 (https://github.com/AngeloSemeraro/domestique)",
       "Accept-Language": "en",
     },
   });

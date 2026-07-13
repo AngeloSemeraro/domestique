@@ -1,14 +1,14 @@
-# Strava Batch Editor — WordPress plugin
+# Domestique — WordPress plugin
 
-Self-contained WordPress plugin that brings the Strava Batch Editor into any
+Self-contained WordPress plugin that brings Domestique into any
 page via shortcodes. Lives alongside the Next.js app in this repo so the two
 implementations can share `src/lib/gpx.ts` and `src/lib/file-parsers.ts` for
 the heavy lifting; only the backend / glue is rewritten in PHP.
 
 ```
 wordpress-plugin/
-  strava-batch-editor/      ← this is the plugin folder you zip and install
-    strava-batch-editor.php
+  domestique/      ← this is the plugin folder you zip and install
+    domestique.php
     readme.txt
     LICENSE
     includes/*.php
@@ -41,8 +41,8 @@ app — only the API base URL and auth header differ (handled by
 ```bash
 cd wordpress-plugin
 npm install
-npm run build       # writes strava-batch-editor/assets/js/app.iife.js
-                    # and strava-batch-editor/assets/css/app.css
+npm run build       # writes domestique/assets/js/app.iife.js
+                    # and domestique/assets/css/app.css
 ```
 
 `npm run dev` watches for changes during development. The plugin enqueues
@@ -55,12 +55,12 @@ While phase 4 isn't done, the plugin loads and the admin / OAuth / REST work,
 but the shortcode renders an empty mount point (the React bundle isn't built
 yet). To test the PHP layer:
 
-1. Symlink or copy `wordpress-plugin/strava-batch-editor/` into a WordPress
-   install: `wp-content/plugins/strava-batch-editor/`.
+1. Symlink or copy `wordpress-plugin/domestique/` into a WordPress
+   install: `wp-content/plugins/domestique/`.
 2. Activate the plugin in **Plugins**.
-3. **Settings → Strava Batch Editor**: paste Client ID / Client Secret from
+3. **Settings → Domestique**: paste Client ID / Client Secret from
    your Strava API app (Authorization Callback Domain = the site's host).
-4. Add `[strava_batch_editor]` to a page — visit it as a logged-in user.
+4. Add `[domestique]` to a page — visit it as a logged-in user.
 5. The Connect button works:
    `your-site.com/wp-json/sbe/v1/auth/login?return=…`.
 

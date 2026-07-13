@@ -1,18 +1,18 @@
-=== Strava Batch Editor ===
+=== Domestique ===
 Contributors: angelosemeraro
 Tags: strava, cycling, gpx, tcx, fit, batch edit, merge
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 0.4.0
+Stable tag: 0.5.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
-Edit, merge and clean up your Strava rides in bulk — right inside any WordPress page via shortcode. Each user connects their own Strava account.
+The domestique for your Strava rides: batch edit, merge, inspect and export them in bulk — right inside any WordPress page via shortcode. Each user connects their own Strava account.
 
 == Description ==
 
-Strava Batch Editor brings the open-source [Strava Batch Editor](https://github.com/AngeloSemeraro/strava_batch_editor) into WordPress as a plugin you can drop onto any page or post.
+Domestique brings the open-source [Domestique](https://github.com/AngeloSemeraro/domestique) into WordPress as a plugin you can drop onto any page or post.
 
 Three tools in one:
 
@@ -24,15 +24,15 @@ Outputs both **TCX** (recommended for Strava — carries the real distance odome
 
 = How users access it =
 
-The site administrator pastes their Strava API Client ID / Client Secret once in **Settings → Strava Batch Editor**.
+The site administrator pastes their Strava API Client ID / Client Secret once in **Settings → Domestique**.
 
 Drop a shortcode on any page or post:
 
-* `[strava_batch_editor]` — full app
-* `[strava_batch_editor tab="edit"]` — Batch edit only
-* `[strava_batch_editor tab="merge"]` — Merge rides only
-* `[strava_batch_editor tab="inspector"]` — Inspector only
-* `[strava_batch_editor_login]` — just the Connect with Strava button
+* `[domestique]` — full app
+* `[domestique tab="edit"]` — Batch edit only
+* `[domestique tab="merge"]` — Merge rides only
+* `[domestique tab="inspector"]` — Inspector only
+* `[domestique_login]` — just the Connect with Strava button
 
 Every logged-in WordPress user clicks **Connect with Strava** to authorize their *own* account. Tokens are stored in their user meta and never shared between users.
 
@@ -51,10 +51,10 @@ This plugin calls the following external services on behalf of the logged-in use
 
 == Installation ==
 
-1. Upload `strava-batch-editor` to the `/wp-content/plugins/` directory, or install via the Plugins screen.
+1. Upload `domestique` to the `/wp-content/plugins/` directory, or install via the Plugins screen.
 2. Activate it.
-3. Go to **Settings → Strava Batch Editor** and follow the on-screen steps to create a free Strava API app and paste the Client ID / Client Secret.
-4. Add `[strava_batch_editor]` to any page.
+3. Go to **Settings → Domestique** and follow the on-screen steps to create a free Strava API app and paste the Client ID / Client Secret.
+4. Add `[domestique]` to any page.
 
 == Frequently Asked Questions ==
 
@@ -83,13 +83,18 @@ This whole thing was vibe coded using Claude Code. I'm not a developer and I don
 Provided **as is**, with no warranty of any kind (see GPLv3 sections 15-16 for the legal text). In plain English:
 
 * **No guaranteed updates.** If Strava changes its API, this plugin may break. There's no roadmap and no release schedule.
-* **No support channel.** There's no help desk, no email, no Discord. Bug reports and pull requests on [GitHub Issues](https://github.com/AngeloSemeraro/strava_batch_editor/issues) are welcome but will be looked at when (and if) time allows — and any fix will most likely be vibe coded too.
+* **No support channel.** There's no help desk, no email, no Discord. Bug reports and pull requests on [GitHub Issues](https://github.com/AngeloSemeraro/domestique/issues) are welcome but will be looked at when (and if) time allows — and any fix will most likely be vibe coded too.
 * **Use at your own risk.** It only writes to *your* Strava account using *your* API credentials, so the blast radius is your own data — but please review what a bulk edit does on a small selection before hitting "Apply" to 500 activities.
 * **Fork it.** It's GPLv3 — if you need a fix and nobody's coming, clone the repo (or point your own AI at it) and change it yourself. That's the whole point of free software.
 
 Not affiliated with Strava, Inc.
 
 == Changelog ==
+
+= 0.5.0 =
+* Renamed to **Domestique** — a domestique does the hard work for the team; this plugin does it for your rides.
+* New shortcodes `[domestique]` and `[domestique_login]`. The old `[strava_batch_editor]` shortcodes keep working as hidden aliases, so existing pages don't break.
+* Plugin folder and slug renamed to `domestique`: deactivate and **delete the old plugin**, then install this one. Settings and per-user Strava / RideWithGPS connections are preserved (they live in the database).
 
 = 0.4.0 =
 * All three tabs share one "sources" box with Strava rides / Local files tabs: batch-edit exports, merge sources and the Inspector all accept both.
@@ -100,7 +105,7 @@ Not affiliated with Strava, Inc.
 
 = 0.3.0 =
 * Batch edit tab: new "Send / export" section — export selected activities as GPX exactly as recorded.
-* Optional RideWithGPS integration: each user connects their own RideWithGPS account (OAuth) and uploads selected activities to their library in batch. Admin configures the API client in Settings → Strava Batch Editor.
+* Optional RideWithGPS integration: each user connects their own RideWithGPS account (OAuth) and uploads selected activities to their library in batch. Admin configures the API client in Settings → Domestique.
 * Batch "Download GPX (zip)": all selected activities in one zip, for manual import into Komoot (no public API) or anywhere else.
 
 = 0.2.0 =
@@ -114,6 +119,9 @@ Not affiliated with Strava, Inc.
 * Initial release: OAuth, settings page, REST proxy, shortcodes, React bundle.
 
 == Upgrade Notice ==
+
+= 0.5.0 =
+The plugin is now called Domestique. Delete the old "Strava Batch Editor" plugin first, then install this zip — settings and connections carry over, and the old shortcodes still work.
 
 = 0.4.0 =
 Unified Strava + local file sources in all tabs, FIT zip export, Batch edit layout rework. Rebuild the React bundle when updating from source.

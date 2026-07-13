@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
 
   const envPath = path.join(process.cwd(), ".env.local");
   const contents = [
-    "# Written by Strava Batch Editor onboarding wizard",
+    "# Written by Domestique onboarding wizard",
     `STRAVA_CLIENT_ID=${clientId}`,
     `STRAVA_CLIENT_SECRET=${clientSecret}`,
     `NEXT_PUBLIC_APP_URL=${appUrl}`,

@@ -14,8 +14,8 @@ fixes and ideas are all welcome.
 ## Getting set up
 
 ```bash
-git clone https://github.com/AngeloSemeraro/strava_batch_editor.git
-cd strava_batch_editor
+git clone https://github.com/AngeloSemeraro/domestique.git
+cd domestique
 npm install
 npm run dev
 ```

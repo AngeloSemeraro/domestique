@@ -102,7 +102,7 @@ export default function OnboardingWizard({
           <AppLogo size={40} />
           <div>
             <h1 className="text-xl font-bold tracking-tight">
-              Strava Batch Editor
+              Domestique
             </h1>
             <p className="text-xs text-[color:var(--fg-muted)]">
               First-run setup
@@ -208,7 +208,7 @@ function WelcomeStep({
         Let&apos;s connect Strava (~2 minutes)
       </h2>
       <p className="text-sm leading-relaxed text-[color:var(--fg-muted)]">
-        Strava Batch Editor talks to your account on your behalf using
+        Domestique talks to your account on your behalf using
         Strava&apos;s official OAuth API. To do that you need to register a
         tiny &quot;application&quot; in your Strava account — this gives you
         a Client ID and Client Secret that stay on{" "}
@@ -273,7 +273,7 @@ function CreateAppStep({ callbackDomain }: { callbackDomain: string }) {
       </p>
       <FieldList
         items={[
-          { k: "Application Name", v: "Strava Batch Editor (or anything)" },
+          { k: "Application Name", v: "Domestique (or anything)" },
           { k: "Category", v: "Other" },
           { k: "Club", v: "Leave blank" },
           { k: "Website", v: "http://localhost (or any URL)" },

@@ -18,7 +18,7 @@ export default function AppLogo({ size = 40 }: { size?: number }) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={logoSrc()}
-        alt="Strava Batch Editor logo"
+        alt="Domestique logo"
         width={size}
         height={size}
         style={{ width: size, height: size, objectFit: "cover" }}
