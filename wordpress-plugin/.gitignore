@@ -1,6 +1,4 @@
 node_modules/
 dist/
 *.log
-domestique/assets/js/
-domestique/assets/css/
 package-lock.json
