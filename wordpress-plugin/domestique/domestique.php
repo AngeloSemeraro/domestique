@@ -3,7 +3,7 @@
  * Plugin Name:       Domestique
  * Plugin URI:        https://github.com/AngeloSemeraro/domestique
  * Description:       The domestique for your Strava rides: batch edit, merge, inspect and export them from any WordPress page via shortcode. Each user connects their own Strava account.
- * Version:           0.6.0
+ * Version:           0.6.1
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Angelo Semeraro
@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SBE_VERSION', '0.6.0' );
+define( 'SBE_VERSION', '0.6.1' );
 define( 'SBE_PLUGIN_FILE', __FILE__ );
 define( 'SBE_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SBE_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

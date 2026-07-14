@@ -447,15 +447,20 @@ function CredentialsStep({
             >
               ridewithgps.com
             </a>{" "}
-            open <strong>Account Settings → Developers</strong>, create an API
-            client, and set its <strong>Redirect URI</strong> to:
+            open <strong>Account Settings → Developers</strong> and create an
+            API client. On that client, turn on <strong>OAuth</strong> and set
+            its <strong>Redirect URI</strong> to:
           </p>
           <code className="block break-all rounded border border-[color:var(--border)] bg-[color:var(--bg-elev)] px-2 py-1.5 text-xs">
             {appUrl.replace(/\/$/, "")}/api/rwgps/auth/callback
           </code>
+          <p className="text-xs text-[color:var(--fg-muted)]">
+            Then copy the <strong>OAuth</strong> Client ID and Secret (not the
+            plain API key):
+          </p>
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-xs uppercase tracking-wider text-[color:var(--fg-muted)]">
-              RideWithGPS Client ID
+              RideWithGPS OAuth Client ID
             </span>
             <input
               type="text"
@@ -467,7 +472,7 @@ function CredentialsStep({
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-xs uppercase tracking-wider text-[color:var(--fg-muted)]">
-              RideWithGPS Client Secret
+              RideWithGPS OAuth Client Secret
             </span>
             <input
               type="password"

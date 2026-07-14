@@ -22,16 +22,34 @@ final class SBE_Admin {
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 	}
 
+	/**
+	 * Menu icon: a hand-drawn bicycle wheel (tyre, hub, spokes) as a
+	 * base64 SVG data URI. #a7aaad is WordPress's default inactive
+	 * menu-icon grey so it sits naturally in the admin sidebar.
+	 */
+	private function menu_icon(): string {
+		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">'
+			. '<g fill="none" stroke="#a7aaad" stroke-width="1.15">'
+			. '<circle cx="10" cy="10" r="8.45"/>'
+			. '<circle cx="10" cy="10" r="1.7" fill="#a7aaad" stroke="none"/>'
+			. '<line x1="10" y1="10" x2="10" y2="1.55"/><line x1="10" y1="10" x2="10" y2="18.45"/>'
+			. '<line x1="10" y1="10" x2="1.55" y2="10"/><line x1="10" y1="10" x2="18.45" y2="10"/>'
+			. '<line x1="10" y1="10" x2="4.03" y2="4.03"/><line x1="10" y1="10" x2="15.97" y2="15.97"/>'
+			. '<line x1="10" y1="10" x2="15.97" y2="4.03"/><line x1="10" y1="10" x2="4.03" y2="15.97"/>'
+			. '</g></svg>';
+		return 'data:image/svg+xml;base64,' . base64_encode( $svg );
+	}
+
 	public function add_menu(): void {
 		// Top-level menu (its own item in the admin sidebar), not buried
-		// under Settings. Uses a bike dashicon.
+		// under Settings, with a custom bicycle-wheel icon.
 		add_menu_page(
 			__( 'Domestique', 'domestique' ),
 			__( 'Domestique', 'domestique' ),
 			'manage_options',
 			'domestique',
 			array( $this, 'render_page' ),
-			'dashicons-bike',
+			$this->menu_icon(),
 			58 // just below Plugins
 		);
 		// Give the submenu a friendlier label than the repeated menu title.
@@ -159,17 +177,18 @@ final class SBE_Admin {
 										?>
 									</li>
 									<li><?php echo wp_kses_post( __( 'Go to the <strong>Developers</strong> tab and create a new <strong>API client</strong> (application).', 'domestique' ) ); ?></li>
+									<li><?php echo wp_kses_post( __( 'On that client, turn on / configure <strong>OAuth</strong> (the API key alone is not enough — this app uses OAuth).', 'domestique' ) ); ?></li>
 									<li>
-										<?php echo wp_kses_post( __( 'Set its <strong>Redirect URI</strong> (callback URL) to exactly:', 'domestique' ) ); ?>
+										<?php echo wp_kses_post( __( 'Set the OAuth <strong>Redirect URI</strong> (callback URL) to exactly:', 'domestique' ) ); ?>
 										<br><code style="user-select:all;"><?php echo esc_html( SBE_RWGPS::redirect_uri() ); ?></code>
 									</li>
-									<li><?php echo wp_kses_post( __( 'Save, then copy the <strong>Client ID</strong> and <strong>Client Secret</strong> into the fields below.', 'domestique' ) ); ?></li>
+									<li><?php echo wp_kses_post( __( 'Save, then copy the <strong>OAuth Client ID</strong> and <strong>OAuth Client Secret</strong> into the fields below.', 'domestique' ) ); ?></li>
 								</ol>
 							</th>
 						</tr>
 						<tr>
 							<th scope="row">
-								<label for="sbe_rwgps_client_id"><?php esc_html_e( 'RideWithGPS Client ID', 'domestique' ); ?></label>
+								<label for="sbe_rwgps_client_id"><?php esc_html_e( 'RideWithGPS OAuth Client ID', 'domestique' ); ?></label>
 							</th>
 							<td>
 								<input
@@ -184,7 +203,7 @@ final class SBE_Admin {
 						</tr>
 						<tr>
 							<th scope="row">
-								<label for="sbe_rwgps_client_secret"><?php esc_html_e( 'RideWithGPS Client Secret', 'domestique' ); ?></label>
+								<label for="sbe_rwgps_client_secret"><?php esc_html_e( 'RideWithGPS OAuth Client Secret', 'domestique' ); ?></label>
 							</th>
 							<td>
 								<input
@@ -199,7 +218,7 @@ final class SBE_Admin {
 						</tr>
 						<tr>
 							<th scope="row">
-								<label for="sbe_rwgps_api_key"><?php esc_html_e( 'RideWithGPS API key', 'domestique' ); ?></label>
+								<label for="sbe_rwgps_api_key"><?php esc_html_e( 'RideWithGPS API key (optional)', 'domestique' ); ?></label>
 							</th>
 							<td>
 								<input
@@ -211,7 +230,7 @@ final class SBE_Admin {
 									autocomplete="off"
 								/>
 								<p class="description">
-									<?php esc_html_e( 'Almost always leave this empty — RideWithGPS uses the Client ID as the API key. Fill it only if your API client shows a separate key.', 'domestique' ); ?>
+									<?php esc_html_e( 'Leave empty in most cases. Fill it only if uploads fail and your API client shows a distinct API key separate from the OAuth Client ID.', 'domestique' ); ?>
 								</p>
 							</td>
 						</tr>

@@ -133,16 +133,18 @@ To enable **Upload to RideWithGPS**, register a free API client on your
 RideWithGPS account:
 
 1. Sign in at <https://ridewithgps.com/api> and open your **Account
-   Settings**.
-2. Go to the **Developers** tab and create a new **API client**.
-3. Set its **Redirect URI** to `<your app URL>/api/rwgps/auth/callback`
+   Settings → Developers**.
+2. Create a new **API client**.
+3. On that client, turn on / configure **OAuth** — the plain API key is not
+   enough, this app authenticates with OAuth.
+4. Set the OAuth **Redirect URI** to `<your app URL>/api/rwgps/auth/callback`
    (e.g. `http://localhost:3000/api/rwgps/auth/callback`).
-4. Copy the **Client ID** and **Client Secret** into `.env.local`:
+5. Copy the **OAuth Client ID** and **OAuth Client Secret** into `.env.local`:
 
 ```env
-RWGPS_CLIENT_ID=...
-RWGPS_CLIENT_SECRET=...
-# almost always leave blank — RWGPS uses the Client ID as the API key:
+RWGPS_CLIENT_ID=...        # OAuth Client ID
+RWGPS_CLIENT_SECRET=...    # OAuth Client Secret
+# leave blank unless uploads fail and your client shows a separate API key:
 RWGPS_API_KEY=
 ```
 
