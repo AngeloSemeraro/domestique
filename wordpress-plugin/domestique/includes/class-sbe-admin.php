@@ -23,9 +23,22 @@ final class SBE_Admin {
 	}
 
 	public function add_menu(): void {
-		add_options_page(
+		// Top-level menu (its own item in the admin sidebar), not buried
+		// under Settings. Uses a bike dashicon.
+		add_menu_page(
 			__( 'Domestique', 'domestique' ),
 			__( 'Domestique', 'domestique' ),
+			'manage_options',
+			'domestique',
+			array( $this, 'render_page' ),
+			'dashicons-bike',
+			58 // just below Plugins
+		);
+		// Give the submenu a friendlier label than the repeated menu title.
+		add_submenu_page(
+			'domestique',
+			__( 'Domestique settings', 'domestique' ),
+			__( 'Settings', 'domestique' ),
 			'manage_options',
 			'domestique',
 			array( $this, 'render_page' )
@@ -131,11 +144,27 @@ final class SBE_Admin {
 						</tr>
 						<tr>
 							<th scope="row" colspan="2" style="padding-bottom:0;">
-								<h2 style="margin:1em 0 0;"><?php esc_html_e( 'RideWithGPS (optional)', 'domestique' ); ?></h2>
-								<p style="font-weight:normal;">
-									<?php esc_html_e( 'Enables "Send to RideWithGPS" in the Batch edit tab. Register a free API client on your RideWithGPS account (ridewithgps.com/api) and set its redirect URI to:', 'domestique' ); ?>
-									<br><code><?php echo esc_html( SBE_RWGPS::redirect_uri() ); ?></code>
+								<h2 style="margin:1.5em 0 0;"><?php esc_html_e( 'RideWithGPS (optional)', 'domestique' ); ?></h2>
+								<p style="font-weight:normal;max-width:620px;">
+									<?php esc_html_e( 'Lets each user upload their selected activities straight to their own RideWithGPS library from the Batch edit tab. Leave blank to hide the feature — the GPX/FIT downloads work without it.', 'domestique' ); ?>
 								</p>
+								<ol style="font-weight:normal;max-width:620px;">
+									<li>
+										<?php
+										printf(
+											/* translators: %s: link to the RideWithGPS API page */
+											wp_kses_post( __( 'Sign in at %s and open your account settings.', 'domestique' ) ),
+											'<a href="https://ridewithgps.com/api" target="_blank" rel="noreferrer">ridewithgps.com/api</a>'
+										);
+										?>
+									</li>
+									<li><?php echo wp_kses_post( __( 'Go to the <strong>Developers</strong> tab and create a new <strong>API client</strong> (application).', 'domestique' ) ); ?></li>
+									<li>
+										<?php echo wp_kses_post( __( 'Set its <strong>Redirect URI</strong> (callback URL) to exactly:', 'domestique' ) ); ?>
+										<br><code style="user-select:all;"><?php echo esc_html( SBE_RWGPS::redirect_uri() ); ?></code>
+									</li>
+									<li><?php echo wp_kses_post( __( 'Save, then copy the <strong>Client ID</strong> and <strong>Client Secret</strong> into the fields below.', 'domestique' ) ); ?></li>
+								</ol>
 							</th>
 						</tr>
 						<tr>
@@ -182,7 +211,7 @@ final class SBE_Admin {
 									autocomplete="off"
 								/>
 								<p class="description">
-									<?php esc_html_e( 'Only needed when it differs from the Client ID — leave empty otherwise.', 'domestique' ); ?>
+									<?php esc_html_e( 'Almost always leave this empty — RideWithGPS uses the Client ID as the API key. Fill it only if your API client shows a separate key.', 'domestique' ); ?>
 								</p>
 							</td>
 						</tr>

@@ -129,22 +129,32 @@ Get the Client ID/Secret at <https://www.strava.com/settings/api>
 
 ### Optional: RideWithGPS upload
 
-To enable **Send to RideWithGPS** in the Batch edit tab, register a free API
-client on your RideWithGPS account (developer/API settings — see
-<https://ridewithgps.com/api/v1/doc>), set its OAuth redirect URI to
-`<your app URL>/api/rwgps/auth/callback`, and add to `.env.local`:
+To enable **Upload to RideWithGPS**, register a free API client on your
+RideWithGPS account:
+
+1. Sign in at <https://ridewithgps.com/api> and open your **Account
+   Settings**.
+2. Go to the **Developers** tab and create a new **API client**.
+3. Set its **Redirect URI** to `<your app URL>/api/rwgps/auth/callback`
+   (e.g. `http://localhost:3000/api/rwgps/auth/callback`).
+4. Copy the **Client ID** and **Client Secret** into `.env.local`:
 
 ```env
 RWGPS_CLIENT_ID=...
 RWGPS_CLIENT_SECRET=...
-# only if your API key differs from the client id:
+# almost always leave blank — RWGPS uses the Client ID as the API key:
 RWGPS_API_KEY=
 ```
 
-In the WordPress plugin the same credentials go in **Settings → Domestique**
-(redirect URI is shown on that page). Each user then connects their
-own RideWithGPS account from the Batch edit tab. Without credentials the
-upload button stays disabled (its tooltip says why) — the GPX/FIT zip
+The first-run setup wizard also has an optional RideWithGPS section that
+writes these for you. Once configured, connect your RideWithGPS account from
+**Preferences** (top-right) — after that it shows there like Strava, and the
+**Upload to RideWithGPS** button in the Batch edit tab is enabled.
+
+In the **WordPress plugin** the same credentials go in the **Domestique →
+Settings** admin screen (the redirect URI to paste is shown right there).
+Each logged-in user then connects their own RideWithGPS account from
+Preferences. Without credentials the upload stays disabled — the GPX/FIT zip
 downloads always work.
 
 ---

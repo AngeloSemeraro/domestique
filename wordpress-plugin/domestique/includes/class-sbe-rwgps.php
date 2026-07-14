@@ -10,7 +10,7 @@
  * RWGPS API specifics are centralized here; official docs:
  * https://ridewithgps.com/api/v1/doc — the site admin registers an API
  * client on their RideWithGPS account and pastes the credentials in
- * Settings → Domestique.
+ * Domestique → Settings.
  *
  * @package Domestique
  */
@@ -97,7 +97,7 @@ final class SBE_RWGPS {
 			exit;
 		}
 		if ( ! self::is_configured() ) {
-			wp_die( esc_html__( 'RideWithGPS is not configured (Settings → Domestique).', 'domestique' ) );
+			wp_die( esc_html__( 'RideWithGPS is not configured (Domestique → Settings).', 'domestique' ) );
 		}
 		$settings = SBE_Plugin::get_settings();
 		$state    = wp_generate_password( 24, false );

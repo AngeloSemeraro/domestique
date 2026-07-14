@@ -4,7 +4,7 @@ Tags: strava, cycling, gpx, tcx, fit, batch edit, merge
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 0.5.1
+Stable tag: 0.6.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -24,7 +24,7 @@ Outputs both **TCX** (recommended for Strava — carries the real distance odome
 
 = How users access it =
 
-The site administrator pastes their Strava API Client ID / Client Secret once in **Settings → Domestique**.
+The site administrator pastes their Strava API Client ID / Client Secret once in **Domestique → Settings**.
 
 Drop a shortcode on any page or post:
 
@@ -53,7 +53,7 @@ This plugin calls the following external services on behalf of the logged-in use
 
 1. Upload `domestique` to the `/wp-content/plugins/` directory, or install via the Plugins screen.
 2. Activate it.
-3. Go to **Settings → Domestique** and follow the on-screen steps to create a free Strava API app and paste the Client ID / Client Secret.
+3. Go to **Domestique → Settings** and follow the on-screen steps to create a free Strava API app and paste the Client ID / Client Secret.
 4. Add `[domestique]` to any page.
 
 == Frequently Asked Questions ==
@@ -91,6 +91,12 @@ Not affiliated with Strava, Inc.
 
 == Changelog ==
 
+= 0.6.0 =
+* Plugin settings moved to a dedicated top-level **Domestique** menu in the WordPress admin (no longer buried under Settings).
+* RideWithGPS connection is now managed in the app's **Preferences** (like Strava): connect, see the connected account, and disconnect there. The Batch edit export buttons are simpler.
+* Clearer, step-by-step RideWithGPS setup instructions (Account Settings → Developers → create API client → Redirect URI).
+* Standalone onboarding wizard gained an optional RideWithGPS step.
+
 = 0.5.1 =
 * Removed the legacy `[strava_batch_editor]` shortcode aliases entirely. Update any published pages to use `[domestique]` / `[domestique_login]`.
 
@@ -108,7 +114,7 @@ Not affiliated with Strava, Inc.
 
 = 0.3.0 =
 * Batch edit tab: new "Send / export" section — export selected activities as GPX exactly as recorded.
-* Optional RideWithGPS integration: each user connects their own RideWithGPS account (OAuth) and uploads selected activities to their library in batch. Admin configures the API client in Settings → Domestique.
+* Optional RideWithGPS integration: each user connects their own RideWithGPS account (OAuth) and uploads selected activities to their library in batch. Admin configures the API client in the Domestique → Settings screen.
 * Batch "Download GPX (zip)": all selected activities in one zip, for manual import into Komoot (no public API) or anywhere else.
 
 = 0.2.0 =
@@ -122,6 +128,9 @@ Not affiliated with Strava, Inc.
 * Initial release: OAuth, settings page, REST proxy, shortcodes, React bundle.
 
 == Upgrade Notice ==
+
+= 0.6.0 =
+Settings now live under the new top-level "Domestique" admin menu; RideWithGPS connect/disconnect moved into the app's Preferences.
 
 = 0.5.1 =
 Legacy shortcodes removed: replace [strava_batch_editor] with [domestique] on your pages.
