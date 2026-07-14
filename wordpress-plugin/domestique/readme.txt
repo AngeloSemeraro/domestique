@@ -4,7 +4,7 @@ Tags: strava, cycling, gpx, tcx, fit, batch edit, merge
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 0.6.0
+Stable tag: 0.6.1
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -91,6 +91,10 @@ Not affiliated with Strava, Inc.
 
 == Changelog ==
 
+= 0.6.1 =
+* Clearer RideWithGPS setup: you need the client's **OAuth** Client ID and Secret (turn on OAuth on the API client and set its Redirect URI), not the plain API key. Instructions and field labels updated.
+* Custom bicycle-wheel icon for the Domestique admin menu.
+
 = 0.6.0 =
 * Plugin settings moved to a dedicated top-level **Domestique** menu in the WordPress admin (no longer buried under Settings).
 * RideWithGPS connection is now managed in the app's **Preferences** (like Strava): connect, see the connected account, and disconnect there. The Batch edit export buttons are simpler.
@@ -128,6 +132,9 @@ Not affiliated with Strava, Inc.
 * Initial release: OAuth, settings page, REST proxy, shortcodes, React bundle.
 
 == Upgrade Notice ==
+
+= 0.6.1 =
+RideWithGPS setup wording corrected (OAuth Client ID/Secret) and a bike-wheel menu icon.
 
 = 0.6.0 =
 Settings now live under the new top-level "Domestique" admin menu; RideWithGPS connect/disconnect moved into the app's Preferences.
