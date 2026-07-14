@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { apiFetch, rwgpsLoginHref } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import {
   Activity,
   Bike,
@@ -197,11 +197,6 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
     } catch {
       setRwgps({ configured: false, connected: false, name: null });
     }
-  }
-
-  async function disconnectRwgps() {
-    await apiFetch("/api/rwgps/auth/logout", { method: "POST" }).catch(() => {});
-    refreshRwgps();
   }
 
   async function sendToRwgps() {
@@ -1078,24 +1073,9 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
             Upload {exportCount > 0 ? exportCount : ""} to RideWithGPS
           </button>
           {rwgps?.configured && !rwgps.connected && (
-            <a
-              href={rwgpsLoginHref()}
-              className="inline-flex items-center gap-2 rounded-full border border-sky-600/50 px-4 py-1.5 text-sm font-medium !text-sky-600 transition-colors hover:bg-sky-600/10 dark:!text-sky-400"
-            >
-              <Link2 className="h-3.5 w-3.5" />
-              Connect RideWithGPS
-            </a>
-          )}
-
-          {rwgps?.configured && rwgps.connected && (
-            <span className="inline-flex items-center gap-2 text-xs text-[color:var(--fg-muted)]">
-              RideWithGPS: connected{rwgps.name ? ` as ${rwgps.name}` : ""} ·{" "}
-              <button
-                onClick={disconnectRwgps}
-                className="underline hover:text-red-500"
-              >
-                disconnect
-              </button>
+            <span className="inline-flex items-center gap-1.5 text-xs text-[color:var(--fg-muted)]">
+              <Link2 className="h-3 w-3" />
+              Connect RideWithGPS in <strong className="font-medium">Preferences</strong> (top-right) to enable upload.
             </span>
           )}
 
@@ -1132,12 +1112,12 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
 
         {rwgps && !rwgps.configured && (
           <p className="mt-3 text-xs text-[color:var(--fg-muted)]">
-            To enable direct RideWithGPS upload, the site owner registers a
-            free RideWithGPS API client and adds its credentials — see the
-            README (Next.js: <code>RWGPS_CLIENT_ID</code> /{" "}
-            <code>RWGPS_CLIENT_SECRET</code> in <code>.env.local</code>;
-            WordPress: Settings → Domestique). The GPX zip download
-            works without any setup.
+            <Info className="mr-1 inline h-3 w-3" />
+            Direct RideWithGPS upload isn&apos;t set up on this install. The
+            owner enables it once (WordPress: <strong>Domestique</strong> menu →
+            RideWithGPS; self-hosted: <code>RWGPS_CLIENT_ID</code> /{" "}
+            <code>RWGPS_CLIENT_SECRET</code> — see the README). The GPX/FIT zip
+            downloads work with no setup.
           </p>
         )}
 

@@ -87,7 +87,7 @@ final class SBE_OAuth {
 			exit;
 		}
 		if ( ! SBE_Plugin::is_configured() ) {
-			wp_die( esc_html__( 'Domestique is not configured (Settings → Domestique).', 'domestique' ) );
+			wp_die( esc_html__( 'Domestique is not configured (Domestique → Settings).', 'domestique' ) );
 		}
 		$settings = SBE_Plugin::get_settings();
 		$state    = wp_generate_password( 24, false );

@@ -29,6 +29,8 @@ export default function OnboardingWizard({
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [sessionSecret, setSessionSecret] = useState("");
+  const [rwgpsClientId, setRwgpsClientId] = useState("");
+  const [rwgpsClientSecret, setRwgpsClientSecret] = useState("");
   const [showSecret, setShowSecret] = useState(false);
   const [showSession, setShowSession] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -70,6 +72,8 @@ export default function OnboardingWizard({
           clientSecret: clientSecret.trim(),
           sessionSecret: sessionSecret.trim(),
           appUrl,
+          rwgpsClientId: rwgpsClientId.trim(),
+          rwgpsClientSecret: rwgpsClientSecret.trim(),
         }),
       });
       const data = await res.json();
@@ -132,6 +136,11 @@ export default function OnboardingWizard({
               setShowSecret={setShowSecret}
               showSession={showSession}
               setShowSession={setShowSession}
+              rwgpsClientId={rwgpsClientId}
+              setRwgpsClientId={setRwgpsClientId}
+              rwgpsClientSecret={rwgpsClientSecret}
+              setRwgpsClientSecret={setRwgpsClientSecret}
+              appUrl={appUrl}
             />
           )}
           {step === 3 && (
@@ -140,6 +149,8 @@ export default function OnboardingWizard({
               clientSecret={clientSecret}
               sessionSecret={sessionSecret}
               appUrl={appUrl}
+              rwgpsClientId={rwgpsClientId}
+              rwgpsClientSecret={rwgpsClientSecret}
               selfHosted={status.selfHosted}
               saving={saving}
               saved={saved}
@@ -305,6 +316,11 @@ function CredentialsStep({
   setShowSecret,
   showSession,
   setShowSession,
+  rwgpsClientId,
+  setRwgpsClientId,
+  rwgpsClientSecret,
+  setRwgpsClientSecret,
+  appUrl,
 }: {
   clientId: string;
   setClientId: (v: string) => void;
@@ -316,6 +332,11 @@ function CredentialsStep({
   setShowSecret: (b: boolean) => void;
   showSession: boolean;
   setShowSession: (b: boolean) => void;
+  rwgpsClientId: string;
+  setRwgpsClientId: (v: string) => void;
+  rwgpsClientSecret: string;
+  setRwgpsClientSecret: (v: string) => void;
+  appUrl: string;
 }) {
   return (
     <div className="space-y-4">
@@ -406,6 +427,58 @@ function CredentialsStep({
           Used to encrypt the session cookie. Never sent to Strava.
         </p>
       </label>
+
+      <details className="rounded-lg border border-[color:var(--border)] bg-[color:var(--bg-input)] p-3">
+        <summary className="cursor-pointer text-sm font-medium">
+          RideWithGPS upload{" "}
+          <span className="font-normal text-[color:var(--fg-muted)]">
+            — optional, you can skip this
+          </span>
+        </summary>
+        <div className="mt-3 space-y-3">
+          <p className="text-xs leading-relaxed text-[color:var(--fg-muted)]">
+            Lets you upload activities straight to your RideWithGPS library.
+            On{" "}
+            <a
+              href="https://ridewithgps.com/api"
+              target="_blank"
+              rel="noreferrer"
+              className="text-strava hover:underline"
+            >
+              ridewithgps.com
+            </a>{" "}
+            open <strong>Account Settings → Developers</strong>, create an API
+            client, and set its <strong>Redirect URI</strong> to:
+          </p>
+          <code className="block break-all rounded border border-[color:var(--border)] bg-[color:var(--bg-elev)] px-2 py-1.5 text-xs">
+            {appUrl.replace(/\/$/, "")}/api/rwgps/auth/callback
+          </code>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-xs uppercase tracking-wider text-[color:var(--fg-muted)]">
+              RideWithGPS Client ID
+            </span>
+            <input
+              type="text"
+              value={rwgpsClientId}
+              onChange={(e) => setRwgpsClientId(e.target.value)}
+              placeholder="from your API client"
+              className="rounded-lg border border-[color:var(--border)] bg-[color:var(--bg-elev)] px-3 py-2 font-mono text-sm"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-xs uppercase tracking-wider text-[color:var(--fg-muted)]">
+              RideWithGPS Client Secret
+            </span>
+            <input
+              type="password"
+              value={rwgpsClientSecret}
+              onChange={(e) => setRwgpsClientSecret(e.target.value)}
+              placeholder="from your API client"
+              className="rounded-lg border border-[color:var(--border)] bg-[color:var(--bg-elev)] px-3 py-2 font-mono text-sm"
+            />
+          </label>
+        </div>
+      </details>
     </div>
   );
 }
@@ -415,6 +488,8 @@ function SaveStep({
   clientSecret,
   sessionSecret,
   appUrl,
+  rwgpsClientId,
+  rwgpsClientSecret,
   selfHosted,
   saving,
   saved,
@@ -425,6 +500,8 @@ function SaveStep({
   clientSecret: string;
   sessionSecret: string;
   appUrl: string;
+  rwgpsClientId: string;
+  rwgpsClientSecret: string;
   selfHosted: boolean;
   saving: boolean;
   saved: boolean;
@@ -436,6 +513,12 @@ function SaveStep({
     `STRAVA_CLIENT_SECRET=${clientSecret}`,
     `NEXT_PUBLIC_APP_URL=${appUrl}`,
     `SESSION_SECRET=${sessionSecret}`,
+    ...(rwgpsClientId.trim() && rwgpsClientSecret.trim()
+      ? [
+          `RWGPS_CLIENT_ID=${rwgpsClientId.trim()}`,
+          `RWGPS_CLIENT_SECRET=${rwgpsClientSecret.trim()}`,
+        ]
+      : []),
   ].join("\n");
 
   function setOnceUnused(_: unknown) {
