@@ -5,37 +5,29 @@
 /* Scope variables/typography to the plugin mount so we don't fight the
  * surrounding WordPress theme. Color tokens mirror the Next.js app. */
 .sbe-mount {
-  --bg: #ffffff;
-  --bg-elev: #fafafa;
-  --bg-input: #ffffff;
-  --fg: #0a0a0a;
-  --fg-muted: #6b7280;
-  --border: #e5e7eb;
-  --row-hover: #f5f5f5;
-  --row-selected: rgba(252, 76, 2, 0.08);
+  --bg: #dbd7ce;
+  --bg-elev: #e7e3d9;
+  --bg-input: #f1eee6;
+  --fg: #33302a;
+  --fg-muted: #6f6a5d;
+  --border: #c7c1b3;
+  --row-hover: #e3dfd4;
+  --row-selected: rgba(239, 149, 176, 0.18);
+  --header-bg: #33302a;
+  --accent: #ef95b0;
+  --accent-fg: #33302a;
+  --tab-inactive: #565148;
+  --tab-inactive-fg: #dfbdba;
   background: var(--bg);
   color: var(--fg);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   border-radius: 0.75rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  .sbe-mount {
-    --bg: #0a0a0b;
-    --bg-elev: #131316;
-    --bg-input: #0f0f12;
-    --fg: #f5f5f5;
-    --fg-muted: #9ca3af;
-    --border: #27272a;
-    --row-hover: #1a1a1d;
-    --row-selected: rgba(252, 76, 2, 0.12);
-  }
-}
-
 /* react-day-picker palette parity with the Next.js build */
 .sbe-mount .rdp-strava {
-  --rdp-accent-color: #fc4c02;
-  --rdp-accent-background-color: rgba(252, 76, 2, 0.12);
+  --rdp-accent-color: #ef95b0;
+  --rdp-accent-background-color: rgba(239, 149, 176, 0.22);
   --rdp-day-height: 2rem;
   --rdp-day-width: 2rem;
   font-size: 0.875rem;
@@ -57,43 +49,4 @@
 
 .sbe-mount .sbe-map .leaflet-control-attribution {
   font-size: 10px;
-}
-
-@media (prefers-color-scheme: dark) {
-  .sbe-mount .sbe-map .sbe-basemap {
-    filter: brightness(0.75) contrast(1.05) saturate(0.8);
-  }
-
-  .sbe-mount .sbe-map .leaflet-control-attribution {
-    background: rgba(19, 19, 22, 0.75);
-    color: var(--fg-muted);
-  }
-
-  .sbe-mount .sbe-map .leaflet-control-attribution a {
-    color: var(--fg);
-  }
-
-  .sbe-mount .sbe-map .leaflet-control-zoom a {
-    background: var(--bg-elev);
-    color: var(--fg);
-    border-color: var(--border);
-  }
-
-  .sbe-mount .sbe-map .leaflet-control-scale-line {
-    background: rgba(19, 19, 22, 0.6);
-    color: var(--fg);
-    border-color: var(--fg-muted);
-  }
-
-  .sbe-mount .sbe-map .leaflet-popup-content-wrapper,
-  .sbe-mount .sbe-map .leaflet-popup-tip {
-    background: var(--bg-elev);
-    color: var(--fg);
-  }
-
-  .sbe-mount .sbe-map .leaflet-tooltip {
-    background: var(--bg-elev);
-    color: var(--fg);
-    border-color: var(--border);
-  }
 }

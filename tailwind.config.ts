@@ -6,7 +6,13 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        strava: "#FC4C02",
+        // Brand accent. Kept named "strava" so the many existing
+        // text-strava / bg-strava / accent-strava usages flip to the new
+        // Domestique pink in one place.
+        strava: "#EF95B0",
+        ink: "#33302A",
+        sand: "#DBD7CE",
+        olive: "#565148",
       },
       keyframes: {
         "fade-in": {

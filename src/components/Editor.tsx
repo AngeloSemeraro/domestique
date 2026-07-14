@@ -605,7 +605,7 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
           <button
             onClick={loadActivities}
             disabled={loading}
-            className="group inline-flex items-center gap-2 rounded-full bg-strava px-4 py-1.5 text-sm font-semibold text-white shadow-sm shadow-strava/30 transition-all hover:scale-[1.02] hover:bg-orange-600 active:scale-[0.98] disabled:opacity-50"
+            className="group inline-flex items-center gap-2 rounded-full bg-strava px-4 py-1.5 text-sm font-semibold text-[color:var(--accent-fg)] shadow-sm shadow-strava/30 transition-all hover:scale-[1.02] hover:brightness-95 active:scale-[0.98] disabled:opacity-50"
           >
             {loading ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />

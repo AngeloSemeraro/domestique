@@ -978,7 +978,7 @@ function OutputCard({
     >
       <div
         className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${
-          checked ? "bg-strava text-white" : "bg-[color:var(--row-hover)] text-[color:var(--fg-muted)]"
+          checked ? "bg-strava text-[color:var(--accent-fg)]" : "bg-[color:var(--row-hover)] text-[color:var(--fg-muted)]"
         }`}
       >
         {icon}

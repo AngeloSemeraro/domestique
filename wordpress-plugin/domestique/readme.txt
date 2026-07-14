@@ -4,7 +4,7 @@ Tags: strava, cycling, gpx, tcx, fit, batch edit, merge
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 0.6.1
+Stable tag: 0.7.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -91,6 +91,11 @@ Not affiliated with Strava, Inc.
 
 == Changelog ==
 
+= 0.7.0 =
+* New visual identity: the "archive folder" design — pink Domestique wordmark on a dark header, folder-style tabs, warm sand content. Single light theme.
+* Preferences is now its own tab (with the signed-in account and Logout moved into it), instead of a modal.
+* Tabs relabelled Batch Edit / Merge Rides / Inspect / Preferences; the tab bar sticks to the top while content scrolls underneath.
+
 = 0.6.1 =
 * Clearer RideWithGPS setup: you need the client's **OAuth** Client ID and Secret (turn on OAuth on the API client and set its Redirect URI), not the plain API key. Instructions and field labels updated.
 * Custom bicycle-wheel icon for the Domestique admin menu.
@@ -132,6 +137,9 @@ Not affiliated with Strava, Inc.
 * Initial release: OAuth, settings page, REST proxy, shortcodes, React bundle.
 
 == Upgrade Notice ==
+
+= 0.7.0 =
+Fresh Domestique look (folder tabs, pink/sand palette) and Preferences moved into its own tab.
 
 = 0.6.1 =
 RideWithGPS setup wording corrected (OAuth Client ID/Secret) and a bike-wheel menu icon.
