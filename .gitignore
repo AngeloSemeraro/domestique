@@ -7,3 +7,6 @@ out
 .DS_Store
 .vercel
 next-env.d.ts
+
+# Local deploy credentials — never commit
+scripts/.env.deploy
