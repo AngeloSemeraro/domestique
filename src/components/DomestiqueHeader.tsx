@@ -41,7 +41,7 @@ export default function DomestiqueHeader({
         <header className="bg-[color:var(--header-bg)] text-[color:var(--accent)]">
           <div style={containerStyle} className="pt-5 md:pt-7">
             <Wordmark className="block h-auto w-full" />
-            <p className="mt-1 text-[clamp(0.7rem,1.5vw,1.05rem)] font-extrabold uppercase tracking-[0.14em]">
+            <p className="mt-1 text-[24px] font-bold uppercase leading-[31px] text-[color:var(--accent)]">
               Does the dirty work for your rides
             </p>
           </div>
