@@ -14,7 +14,8 @@ import {
   Loader2,
   Sparkles,
 } from "lucide-react";
-import AppLogo from "./AppLogo";
+import Wordmark from "./Wordmark";
+import { CONTAINER_MAX, CONTAINER_PAD } from "./DomestiqueHeader";
 
 type Status = { missing: string[]; selfHosted: boolean };
 
@@ -100,23 +101,28 @@ export default function OnboardingWizard({
     sessionSecret.trim().length >= 32;
 
   return (
-    <main className="flex min-h-screen flex-col items-center bg-[color:var(--bg)] p-4 md:p-8">
-      <div className="w-full max-w-2xl space-y-6">
-        <header className="animate-fade-in flex items-center gap-3">
-          <AppLogo size={40} />
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">
-              Domestique
-            </h1>
-            <p className="text-xs text-[color:var(--fg-muted)]">
-              First-run setup
-            </p>
-          </div>
-        </header>
+    <main className="flex min-h-screen flex-col bg-[color:var(--header-bg)] text-[color:var(--fg)]">
+      <header
+        className="animate-fade-in pt-6 md:pt-8"
+        style={{
+          maxWidth: CONTAINER_MAX,
+          marginInline: "auto",
+          width: "100%",
+          paddingLeft: CONTAINER_PAD,
+          paddingRight: CONTAINER_PAD,
+        }}
+      >
+        <Wordmark className="block h-auto w-[clamp(190px,30vw,340px)] text-[color:var(--accent)]" />
+        <p className="mt-1 text-[clamp(0.65rem,1.4vw,0.9rem)] font-extrabold uppercase tracking-[0.14em] text-[color:var(--accent)]">
+          Does the dirty work for your rides
+        </p>
+      </header>
 
-        <Stepper current={step} total={4} />
+      <div className="flex w-full flex-1 justify-center px-4 pb-12 pt-8 md:pt-12">
+        <div className="w-full max-w-2xl space-y-6">
+          <Stepper current={step} total={4} />
 
-        <section className="animate-scale-in rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-5 shadow-sm md:p-6">
+          <section className="animate-scale-in rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-5 shadow-lg md:p-7">
           {step === 0 && (
             <WelcomeStep
               missing={status.missing}
@@ -179,7 +185,8 @@ export default function OnboardingWizard({
               </button>
             )}
           </div>
-        </section>
+          </section>
+        </div>
       </div>
     </main>
   );
@@ -192,7 +199,7 @@ function Stepper({ current, total }: { current: number; total: number }) {
         <div
           key={i}
           className={`h-1.5 flex-1 rounded-full transition-colors ${
-            i <= current ? "bg-strava" : "bg-[color:var(--border)]"
+            i <= current ? "bg-strava" : "bg-[color:var(--tab-inactive)]"
           }`}
         />
       ))}
