@@ -20,7 +20,7 @@ export type TrackMapProps = {
   className?: string;
 };
 
-const TRACK_COLOR = "#fc4c02";
+const TRACK_COLOR = "#ef95b0";
 const DROPPED_COLOR = "#6b7280";
 const WINDOW_COLOR = "#0ea5e9";
 const WAYPOINT_COLOR = "#8b5cf6";

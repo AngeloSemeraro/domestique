@@ -29,8 +29,8 @@ body {
 }
 
 .rdp-strava {
-  --rdp-accent-color: #fc4c02;
-  --rdp-accent-background-color: rgba(252, 76, 2, 0.12);
+  --rdp-accent-color: #ef95b0;
+  --rdp-accent-background-color: rgba(239, 149, 176, 0.22);
   --rdp-day-height: 2rem;
   --rdp-day-width: 2rem;
   font-size: 0.875rem;

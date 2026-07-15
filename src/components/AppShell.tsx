@@ -15,7 +15,11 @@ import MergeTab from "./MergeTab";
 import AnalyzerTab from "./AnalyzerTab";
 import Footer from "./Footer";
 import PreferencesPanel from "./PreferencesPanel";
-import DomestiqueHeader, { type HeaderTab } from "./DomestiqueHeader";
+import DomestiqueHeader, {
+  type HeaderTab,
+  CONTAINER_MAX,
+  CONTAINER_PAD,
+} from "./DomestiqueHeader";
 
 type TabId = "edit" | "merge" | "analyze" | "preferences";
 
@@ -56,11 +60,12 @@ export default function AppShell({
       />
 
       <main
-        className="mx-auto w-full flex-1 py-6 md:py-8"
+        className="w-full flex-1 py-6 md:py-8"
         style={{
-          maxWidth: "1440px",
-          paddingLeft: "clamp(1rem, 6vw, 8rem)",
-          paddingRight: "clamp(1rem, 6vw, 8rem)",
+          maxWidth: CONTAINER_MAX,
+          marginInline: "auto",
+          paddingLeft: CONTAINER_PAD,
+          paddingRight: CONTAINER_PAD,
         }}
       >
         <div key={tab} className="animate-fade-in">

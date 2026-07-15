@@ -6,7 +6,12 @@ const config: Config = {
   darkMode: "media",
   theme: {
     extend: {
-      colors: { strava: "#FC4C02" },
+      colors: {
+        strava: "#EF95B0",
+        ink: "#33302A",
+        sand: "#DBD7CE",
+        olive: "#565148",
+      },
       keyframes: {
         "fade-in": {
           from: { opacity: "0", transform: "translateY(4px)" },

@@ -585,7 +585,7 @@ export default function AnalyzerTab({
               <StreamChart
                 title="Speed"
                 unit="km/h"
-                color="#fc4c02"
+                color="#ef95b0"
                 icon={<ActivityIcon className="h-3.5 w-3.5" />}
                 series={speedSeries}
                 runs={analysis.runs}
