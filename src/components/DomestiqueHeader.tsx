@@ -50,7 +50,7 @@ export default function DomestiqueHeader({
 
       <nav className="sticky top-0 z-30 bg-[color:var(--header-bg)]">
         <div style={containerStyle}>
-          <div className="flex items-end overflow-x-auto pl-3 pt-3">
+          <div className="relative flex items-end pl-[5px] pt-3">
             {leftTabs.map((t, i) => (
               <FolderTab
                 key={t.id}
@@ -61,7 +61,7 @@ export default function DomestiqueHeader({
               />
             ))}
             {rightTabs && rightTabs.length > 0 && (
-              <div className="ml-auto flex items-end pr-3">
+              <div className="ml-auto flex items-end pr-[5px]">
                 {rightTabs.map((t) => (
                   <FolderTab
                     key={t.id}
@@ -75,8 +75,10 @@ export default function DomestiqueHeader({
             )}
           </div>
         </div>
-        {/* full-bleed pink folder spine; casts a soft shadow onto the content */}
-        <div className="h-2.5 bg-[color:var(--accent)] shadow-[0_6px_14px_-4px_rgba(0,0,0,0.28)]" />
+        {/* full-bleed pink folder spine — its top sits 47px below the tab top
+            (i.e. overlaps the bottom 24px of the 71px tabs), behind them, so
+            the active tab merges into it and the gaps reveal pink. */}
+        <div className="relative z-0 -mt-6 h-9 bg-[color:var(--accent)]" />
       </nav>
     </>
   );
