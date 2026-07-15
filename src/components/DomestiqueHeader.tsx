@@ -50,22 +50,24 @@ export default function DomestiqueHeader({
 
       <nav className="sticky top-0 z-30 bg-[color:var(--header-bg)]">
         <div style={containerStyle}>
-          <div className="flex items-end gap-2 overflow-x-auto pt-3">
-            {leftTabs.map((t) => (
+          <div className="flex items-end overflow-x-auto pl-3 pt-3">
+            {leftTabs.map((t, i) => (
               <FolderTab
                 key={t.id}
                 tab={t}
                 active={t.id === active}
+                depth={leftTabs.length - i}
                 onClick={() => onChange(t.id)}
               />
             ))}
             {rightTabs && rightTabs.length > 0 && (
-              <div className="ml-auto flex items-end gap-2 pl-4">
+              <div className="ml-auto flex items-end pr-3">
                 {rightTabs.map((t) => (
                   <FolderTab
                     key={t.id}
                     tab={t}
                     active={t.id === active}
+                    depth={1}
                     onClick={() => onChange(t.id)}
                   />
                 ))}
@@ -83,22 +85,32 @@ export default function DomestiqueHeader({
 function FolderTab({
   tab,
   active,
+  depth,
   onClick,
 }: {
   tab: HeaderTab;
   active: boolean;
+  /** Higher = drawn on top; active always wins so left tabs overlap right. */
+  depth: number;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`relative whitespace-nowrap rounded-t-[18px] px-6 text-[0.95rem] font-semibold tracking-tight transition-all ${
-        active
-          ? "z-10 bg-[color:var(--accent)] text-[color:var(--accent-fg)] pb-3.5 pt-3.5 shadow-[0_-2px_16px_rgba(0,0,0,0.34)]"
-          : "bg-[color:var(--tab-inactive)] text-[color:var(--tab-inactive-fg)] pb-2.5 pt-2.5 shadow-[0_-1px_10px_rgba(0,0,0,0.28)] hover:brightness-110"
-      }`}
+      className={`dq-tab ${active ? "dq-tab--active" : "dq-tab--inactive"}`}
+      style={
+        {
+          "--dq-tab-bg": active ? "var(--accent)" : "var(--tab-inactive)",
+          "--dq-tab-fg": active
+            ? "var(--accent-fg)"
+            : "var(--tab-inactive-fg)",
+          zIndex: active ? 30 : depth,
+        } as CSSProperties
+      }
     >
-      {tab.label}
+      <i className="l" aria-hidden />
+      <span>{tab.label}</span>
+      <i className="r" aria-hidden />
     </button>
   );
 }
