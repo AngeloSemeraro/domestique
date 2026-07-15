@@ -76,9 +76,10 @@ export default function DomestiqueHeader({
           </div>
         </div>
         {/* 17px pink shelf, flush with the bottom of the tabs (Figma:
-            content border-top: 17px solid #EF95B0). The active tab merges
-            straight into it. */}
-        <div className="h-[17px] bg-[color:var(--accent)]" />
+            content border-top: 17px solid #EF95B0). It tucks 1px behind the
+            tabs (z-0) so the SVG wings' anti-aliased bottom edge meets pink,
+            not the dark header — kills the hairline seam under the wings. */}
+        <div className="relative z-0 -mt-px h-[18px] bg-[color:var(--accent)]" />
       </nav>
     </>
   );
