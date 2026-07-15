@@ -131,10 +131,13 @@ function FolderTab({
         aria-hidden
         focusable="false"
       >
+        {/* Shadow drawn as a crescent OUTSIDE the wing (not behind its fill),
+            so the pink fill's anti-aliased edge never sits over dark — that
+            bleed was the faint seam along the wing's sloped edge. */}
         <path
           fill="#000000"
           fillOpacity="0.25"
-          d="M22 0H41.62C51.587 0 60.034 7.34006 61.424 17.2106L69 71H22V0Z"
+          d="M19.62 0C29.587 0 38.034 7.34006 39.424 17.2106L47 71L69 71L61.424 17.2106C60.034 7.34006 51.587 0 41.62 0Z"
         />
         <path
           fill={fill}
