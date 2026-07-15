@@ -75,10 +75,10 @@ export default function DomestiqueHeader({
             )}
           </div>
         </div>
-        {/* full-bleed pink folder spine — its top sits 47px below the tab top
-            (i.e. overlaps the bottom 24px of the 71px tabs), behind them, so
-            the active tab merges into it and the gaps reveal pink. */}
-        <div className="relative z-0 -mt-6 h-9 bg-[color:var(--accent)]" />
+        {/* 17px pink shelf, flush with the bottom of the tabs (Figma:
+            content border-top: 17px solid #EF95B0). The active tab merges
+            straight into it. */}
+        <div className="h-[17px] bg-[color:var(--accent)]" />
       </nav>
     </>
   );
