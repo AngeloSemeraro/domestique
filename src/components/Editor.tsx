@@ -1058,7 +1058,7 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
             disabled={exporting || exportCount === 0 || !rwgps?.connected}
             title={
               !rwgps?.configured
-                ? "Requires the site owner to configure a RideWithGPS API client — see README / plugin settings."
+                ? "Configure a RideWithGPS API client to enable upload — see the README."
                 : !rwgps.connected
                   ? "Connect your RideWithGPS account first."
                   : undefined
@@ -1113,11 +1113,10 @@ export default function Editor({ bikes }: { bikes: StravaGear[] }) {
         {rwgps && !rwgps.configured && (
           <p className="mt-3 text-xs text-[color:var(--fg-muted)]">
             <Info className="mr-1 inline h-3 w-3" />
-            Direct RideWithGPS upload isn&apos;t set up on this install. The
-            owner enables it once (WordPress: <strong>Domestique</strong> menu →
-            RideWithGPS; self-hosted: <code>RWGPS_CLIENT_ID</code> /{" "}
-            <code>RWGPS_CLIENT_SECRET</code> — see the README). The GPX/FIT zip
-            downloads work with no setup.
+            Direct RideWithGPS upload isn&apos;t set up on this install. Add{" "}
+            <code>RWGPS_CLIENT_ID</code> / <code>RWGPS_CLIENT_SECRET</code> to
+            enable it once (see the README). The GPX/FIT zip downloads work with
+            no setup.
           </p>
         )}
 

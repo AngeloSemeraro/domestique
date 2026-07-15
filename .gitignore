@@ -8,5 +8,5 @@ out
 .vercel
 next-env.d.ts
 
-# Local deploy credentials — never commit
-scripts/.env.deploy
+# macOS launcher runtime log
+.domestique-launch.log

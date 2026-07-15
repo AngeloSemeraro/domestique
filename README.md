@@ -113,6 +113,18 @@ Open <http://localhost:3000>. On first run a **setup wizard** walks you through:
 Restart the dev server (`Ctrl+C`, then `npm run dev`), reload, and click
 **Connect with Strava**.
 
+### macOS: launch with a double-click
+
+After the one-time clone, you don't need the terminal to start it:
+
+- **`Domestique.app`** — double-click it (it sits in the Dock while running;
+  right-click its icon → **Quit** to stop). No Terminal window.
+- **`Domestique.command`** — same thing but in a visible Terminal window, handy
+  for watching logs; press `Ctrl+C` to stop.
+
+Both start the server and open your default browser at `localhost:3000`, and
+install dependencies automatically on first run.
+
 ### Manual setup (optional)
 
 If you'd rather skip the wizard, copy `.env.example` to `.env.local` and fill:
@@ -153,11 +165,8 @@ writes these for you. Once configured, connect your RideWithGPS account from
 **Preferences** (top-right) — after that it shows there like Strava, and the
 **Upload to RideWithGPS** button in the Batch edit tab is enabled.
 
-In the **WordPress plugin** the same credentials go in the **Domestique →
-Settings** admin screen (the redirect URI to paste is shown right there).
-Each logged-in user then connects their own RideWithGPS account from
-Preferences. Without credentials the upload stays disabled — the GPX/FIT zip
-downloads always work.
+Without credentials the upload stays disabled — the GPX/FIT zip downloads
+always work.
 
 ---
 
@@ -166,52 +175,6 @@ downloads always work.
 Strava allows 200 requests / 15 min and 2,000 / day per application. Because
 every user runs **their own** app, you get the full quota to yourself. Bulk
 edits are throttled (250 ms between writes) and stop cleanly if you hit a limit.
-
----
-
-## Also available: WordPress plugin
-
-The same three tools (Batch edit, Merge rides, Inspector) ship as a
-**self-contained WordPress plugin** — drop a shortcode on any page and the
-app renders right there. Useful if you already host a WordPress site and
-don't want to run Node locally.
-
-| | Next.js (this repo) | WordPress plugin |
-|---|---|---|
-| Where it runs | Your computer (`npm run dev`) | Your WordPress site |
-| Login | Browser cookie session | Standard WordPress login |
-| Multi-user | Single user per install | Each WP user connects their own Strava |
-| Access | `localhost:3000` | Any page with `[domestique]` |
-
-**Shortcodes** the plugin exposes:
-
-```
-[domestique]                     full app, all three tabs
-[domestique tab="edit"]          Batch edit only
-[domestique tab="merge"]         Merge rides only
-[domestique tab="inspector"]     Inspector only
-[domestique_login]               just the Connect with Strava button
-```
-
-**Get it:**
-
-- Pre-built installable ZIPs land on the [Releases page](https://github.com/AngeloSemeraro/domestique/releases)
-- Or build from source — the plugin lives under [`wordpress-plugin/`](wordpress-plugin/):
-
-  ```bash
-  git clone https://github.com/AngeloSemeraro/domestique.git
-  cd domestique/wordpress-plugin
-  npm install && npm run build
-  zip -r domestique.zip domestique -x "*.DS_Store"
-  ```
-
-  Then in WordPress: **Plugins → Add New → Upload Plugin** → pick the zip →
-  **Activate** → **Settings → Domestique** to paste your Strava API
-  credentials. See [`wordpress-plugin/README.md`](wordpress-plugin/README.md)
-  for the full architecture (PHP backend, REST endpoints, OAuth flow).
-
-Same GPLv3 license, same TCX-with-distance logic, same per-user token
-storage. Pick the build that fits your hosting story.
 
 ---
 
