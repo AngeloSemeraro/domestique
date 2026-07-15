@@ -110,9 +110,37 @@ function FolderTab({
         } as CSSProperties
       }
     >
-      <i className="l" aria-hidden />
-      <span>{tab.label}</span>
-      <i className="r" aria-hidden />
+      <svg
+        className="dq-wing dq-l"
+        width="47"
+        height="71"
+        viewBox="0 0 47 71"
+        aria-hidden
+        focusable="false"
+      >
+        <path
+          className="fill"
+          d="M7.57597 17.2106C8.96619 7.34007 17.4125 0 27.3805 0H47V71H0L7.57597 17.2106Z"
+        />
+      </svg>
+      <span className="dq-mid">{tab.label}</span>
+      <svg
+        className="dq-wing dq-r"
+        width="69"
+        height="71"
+        viewBox="0 0 69 71"
+        aria-hidden
+        focusable="false"
+      >
+        <path
+          className="shadow"
+          d="M22 0H41.62C51.587 0 60.034 7.34006 61.424 17.2106L69 71H22V0Z"
+        />
+        <path
+          className="fill"
+          d="M0 0H19.62C29.587 0 38.034 7.34006 39.424 17.2106L47 71H0V0Z"
+        />
+      </svg>
     </button>
   );
 }
