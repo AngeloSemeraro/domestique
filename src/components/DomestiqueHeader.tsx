@@ -96,19 +96,15 @@ function FolderTab({
   depth: number;
   onClick: () => void;
 }) {
+  // Literal colours (not CSS vars): Safari fails to resolve a variable inside
+  // an SVG `fill`, which left the wings unpainted.
+  const fill = active ? "#EF95B0" : "#565148";
+  const fg = active ? "#33302A" : "#DFBDBA";
   return (
     <button
       onClick={onClick}
-      className={`dq-tab ${active ? "dq-tab--active" : "dq-tab--inactive"}`}
-      style={
-        {
-          "--dq-tab-bg": active ? "var(--accent)" : "var(--tab-inactive)",
-          "--dq-tab-fg": active
-            ? "var(--accent-fg)"
-            : "var(--tab-inactive-fg)",
-          zIndex: active ? 30 : depth,
-        } as CSSProperties
-      }
+      className="dq-tab"
+      style={{ color: fg, zIndex: active ? 30 : depth }}
     >
       <svg
         className="dq-wing dq-l"
@@ -119,11 +115,13 @@ function FolderTab({
         focusable="false"
       >
         <path
-          className="fill"
+          fill={fill}
           d="M7.57597 17.2106C8.96619 7.34007 17.4125 0 27.3805 0H47V71H0L7.57597 17.2106Z"
         />
       </svg>
-      <span className="dq-mid">{tab.label}</span>
+      <span className="dq-mid" style={{ background: fill, color: fg }}>
+        {tab.label}
+      </span>
       <svg
         className="dq-wing dq-r"
         width="69"
@@ -133,11 +131,12 @@ function FolderTab({
         focusable="false"
       >
         <path
-          className="shadow"
+          fill="#000000"
+          fillOpacity="0.25"
           d="M22 0H41.62C51.587 0 60.034 7.34006 61.424 17.2106L69 71H22V0Z"
         />
         <path
-          className="fill"
+          fill={fill}
           d="M0 0H19.62C29.587 0 38.034 7.34006 39.424 17.2106L47 71H0V0Z"
         />
       </svg>
