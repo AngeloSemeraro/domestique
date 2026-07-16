@@ -444,108 +444,118 @@ export default function AnalyzerTab({
             </label>
 
             {movement.enabled && (
-              <div className="mt-3 grid grid-cols-2 gap-3 text-xs md:grid-cols-3">
-                <NumberField
-                  label="Min km/h"
-                  hint="below this = stop / pause"
-                  value={movement.minKmh}
-                  step={0.5}
-                  onChange={(v) => setMovement({ ...movement, minKmh: v })}
-                />
-                <NumberField
-                  label="Max km/h"
-                  hint="above this = car / train"
-                  value={movement.maxKmh}
-                  step={1}
-                  onChange={(v) => setMovement({ ...movement, maxKmh: v })}
-                />
-                <NumberField
-                  label="Min run pts"
-                  hint="ignore segments shorter than N points (anti-noise)"
-                  value={movement.minRunPoints}
-                  step={1}
-                  onChange={(v) =>
-                    setMovement({ ...movement, minRunPoints: Math.max(1, v) })
-                  }
-                />
-                <NumberField
-                  label="Max jump (km)"
-                  hint="distance between 2 points above this = teleport, skipped"
-                  value={movement.maxJumpKm}
-                  step={0.5}
-                  onChange={(v) =>
-                    setMovement({ ...movement, maxJumpKm: Math.max(0.1, v) })
-                  }
-                />
-                <label className="col-span-2 flex items-center gap-2 md:col-span-3">
-                  <input
-                    type="checkbox"
-                    checked={movement.useCadence}
-                    onChange={(e) =>
-                      setMovement({ ...movement, useCadence: e.target.checked })
-                    }
-                    className="accent-strava"
-                    disabled={!analysis.hasCad}
+              <div className="mt-3 space-y-2.5 text-xs">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+                  <NumberField
+                    label="Min km/h"
+                    hint="below this = stop / pause"
+                    value={movement.minKmh}
+                    step={0.5}
+                    onChange={(v) => setMovement({ ...movement, minKmh: v })}
                   />
-                  Drop segments with avg cadence below
-                  <input
-                    type="number"
-                    min="0"
-                    value={movement.minAvgCadenceRpm}
-                    disabled={!movement.useCadence || !analysis.hasCad}
-                    onChange={(e) =>
-                      setMovement({
-                        ...movement,
-                        minAvgCadenceRpm: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="w-16 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-1.5 py-0.5 disabled:opacity-50"
+                  <NumberField
+                    label="Max km/h"
+                    hint="above this = car / train"
+                    value={movement.maxKmh}
+                    step={1}
+                    onChange={(v) => setMovement({ ...movement, maxKmh: v })}
                   />
-                  rpm
-                  <span className="text-[color:var(--fg-muted)] opacity-70">
-                    (≈ 0 sustained = not pedaling: train, car, parked)
-                  </span>
-                  {!analysis.hasCad && <span className="text-amber-500">— no data</span>}
-                </label>
-                <label className="col-span-2 flex items-center gap-2 md:col-span-3">
-                  <input
-                    type="checkbox"
-                    checked={movement.useHeartRate}
-                    onChange={(e) =>
-                      setMovement({ ...movement, useHeartRate: e.target.checked })
+                  <NumberField
+                    label="Min pts"
+                    hint="ignore segments shorter than N points (anti-noise)"
+                    value={movement.minRunPoints}
+                    step={1}
+                    onChange={(v) =>
+                      setMovement({ ...movement, minRunPoints: Math.max(1, v) })
                     }
-                    className="accent-strava"
-                    disabled={!analysis.hasHR}
                   />
-                  Drop segments with avg HR below
-                  <input
-                    type="number"
-                    min="0"
-                    value={movement.minAvgHeartRate}
-                    disabled={!movement.useHeartRate || !analysis.hasHR}
-                    onChange={(e) =>
-                      setMovement({
-                        ...movement,
-                        minAvgHeartRate: parseFloat(e.target.value) || 0,
-                      })
+                  <NumberField
+                    label="Max jump km"
+                    hint="distance between 2 points above this = teleport, skipped"
+                    value={movement.maxJumpKm}
+                    step={0.5}
+                    onChange={(v) =>
+                      setMovement({ ...movement, maxJumpKm: Math.max(0.1, v) })
                     }
-                    className="w-16 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-1.5 py-0.5 disabled:opacity-50"
                   />
-                  bpm
-                  <span className="text-[color:var(--fg-muted)] opacity-70">
-                    (below this = at rest: sitting, riding in vehicle)
-                  </span>
-                  {!analysis.hasHR && <span className="text-amber-500">— no data</span>}
-                </label>
-                {movement.useCadence && movement.useHeartRate && analysis.hasCad && analysis.hasHR && (
-                  <p className="col-span-2 text-xs text-[color:var(--fg-muted)] md:col-span-3">
-                    <Info className="mr-1 inline h-3 w-3" />
-                    A segment is dropped only when{" "}
-                    <strong>both</strong> cadence AND HR are below threshold.
-                    Long freewheel descents (cadence 0, HR still elevated) are
-                    kept; train/car (cadence 0 AND HR at rest) are dropped.
-                  </p>
-                )}
+                </div>
+                <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                  <label
+                    className="flex items-center gap-2"
+                    title="≈ 0 sustained = not pedaling (train, car, parked). Kept unless HR is also low."
+                  >
+                    <input
+                      type="checkbox"
+                      checked={movement.useCadence}
+                      onChange={(e) =>
+                        setMovement({ ...movement, useCadence: e.target.checked })
+                      }
+                      className="accent-strava"
+                      disabled={!analysis.hasCad}
+                    />
+                    <span className="whitespace-nowrap">Avg cadence below</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={movement.minAvgCadenceRpm}
+                      disabled={!movement.useCadence || !analysis.hasCad}
+                      onChange={(e) =>
+                        setMovement({
+                          ...movement,
+                          minAvgCadenceRpm: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="w-14 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-1.5 py-0.5 text-right disabled:opacity-50"
+                    />
+                    <span className="text-[color:var(--fg-muted)]">rpm</span>
+                    {!analysis.hasCad && (
+                      <span className="text-amber-500">no data</span>
+                    )}
+                  </label>
+                  <label
+                    className="flex items-center gap-2"
+                    title="below this = at rest (sitting, riding in a vehicle)"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={movement.useHeartRate}
+                      onChange={(e) =>
+                        setMovement({ ...movement, useHeartRate: e.target.checked })
+                      }
+                      className="accent-strava"
+                      disabled={!analysis.hasHR}
+                    />
+                    <span className="whitespace-nowrap">Avg HR below</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={movement.minAvgHeartRate}
+                      disabled={!movement.useHeartRate || !analysis.hasHR}
+                      onChange={(e) =>
+                        setMovement({
+                          ...movement,
+                          minAvgHeartRate: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="w-14 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-1.5 py-0.5 text-right disabled:opacity-50"
+                    />
+                    <span className="text-[color:var(--fg-muted)]">bpm</span>
+                    {!analysis.hasHR && (
+                      <span className="text-amber-500">no data</span>
+                    )}
+                  </label>
+                </div>
+                {movement.useCadence &&
+                  movement.useHeartRate &&
+                  analysis.hasCad &&
+                  analysis.hasHR && (
+                    <p className="text-[color:var(--fg-muted)]">
+                      <Info className="mr-1 inline h-3 w-3" />
+                      A segment is dropped only when <strong>both</strong>{" "}
+                      cadence AND HR are below threshold — freewheel descents
+                      stay, train/car are dropped.
+                    </p>
+                  )}
               </div>
             )}
 
@@ -747,19 +757,19 @@ function NumberField({
   onChange: (n: number) => void;
 }) {
   return (
-    <label className="flex flex-col gap-1">
-      <span className="text-[color:var(--fg-muted)]">
+    <label
+      className="flex items-center justify-between gap-2"
+      title={hint}
+    >
+      <span className="text-[color:var(--fg-muted)] whitespace-nowrap">
         {label}
-        {hint && (
-          <span className="ml-1 normal-case opacity-70">({hint})</span>
-        )}
       </span>
       <input
         type="number"
         step={step}
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-        className="rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-2 py-1"
+        className="w-16 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-2 py-1 text-right"
       />
     </label>
   );
