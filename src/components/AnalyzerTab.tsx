@@ -341,7 +341,7 @@ export default function AnalyzerTab({
             </div>
 
             {(!analysis.hasHR && !analysis.hasCad) && (
-              <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-300">
+              <div className="mt-3 rounded-lg border border-amber-300 bg-amber-100 p-2 text-xs text-amber-900">
                 <Info className="mr-1 inline h-3 w-3" />
                 No HR or cadence data — only speed range can be used to detect
                 train/car. Tighten Max km/h aggressively.
@@ -349,7 +349,7 @@ export default function AnalyzerTab({
             )}
 
             {file.has_time === false && (
-              <div className="mt-3 rounded-lg border border-sky-500/30 bg-sky-500/5 p-2 text-xs text-sky-700 dark:text-sky-300">
+              <div className="mt-3 rounded-lg border border-amber-300 bg-amber-100 p-2 text-xs text-amber-900">
                 <Info className="mr-1 inline h-3 w-3" />
                 This file has no timestamps — synthetic times (1 s per point)
                 were generated so charts, downloads and Strava upload still
