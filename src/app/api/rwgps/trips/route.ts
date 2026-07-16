@@ -14,6 +14,12 @@ type TripBody = {
 export async function POST(req: NextRequest) {
   const session = await getSession();
   const token = session.rwgpsAccessToken;
+  // TEMP diagnostic — prints to the dev server log (.domestique-launch.log)
+  const cookieLen = (req.headers.get("cookie") ?? "").length;
+  console.log(
+    `[rwgps/trips] cookieBytes=${cookieLen} strava=${!!session.athleteId} ` +
+      `rwgps=${token ? "YES(" + token.length + ")" : "NO"} keys=${Object.keys(session).join(",")}`
+  );
   if (!token) {
     return NextResponse.json(
       { error: "Not connected to RideWithGPS" },
