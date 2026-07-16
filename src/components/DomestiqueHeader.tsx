@@ -120,8 +120,11 @@ function FolderTab({
           d="M7.57597 17.2106C8.96619 7.34007 17.4125 0 27.3805 0H47V71H0L7.57597 17.2106Z"
         />
       </svg>
-      <span className="dq-mid" style={{ background: fill, color: fg }}>
-        {tab.label}
+      <span className="dq-mid">
+        <svg className="dq-mid-bg" preserveAspectRatio="none" aria-hidden focusable="false">
+          <rect width="100%" height="100%" fill={fill} />
+        </svg>
+        <span className="dq-mid-label">{tab.label}</span>
       </span>
       <svg
         className="dq-wing dq-r"
