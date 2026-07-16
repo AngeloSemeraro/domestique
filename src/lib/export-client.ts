@@ -1,7 +1,7 @@
 /**
  * Client-side helpers for exporting activities as GPX / FIT files — used by
- * the Batch edit tab to send activities to RideWithGPS and to download them
- * as a zip (e.g. for manual import into Komoot, which has no public API).
+ * the Batch edit tab to download activities as a GPX/FIT zip (e.g. for manual
+ * import into Komoot or RideWithGPS, neither of which offers an upload API).
  *
  * Works on two kinds of sources: Strava activities (streams fetched via the
  * backend) and locally-loaded .gpx/.fit files (already parsed in the

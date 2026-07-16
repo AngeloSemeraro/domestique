@@ -34,16 +34,11 @@ The activities list has two tabs — **Strava rides** and **Local files**
 (.gpx/.fit) — and the selection from both feeds **Send / export**:
 - **Download GPX (zip)** / **Download FIT (zip)** — every selected activity,
   exactly as recorded, in a single zip (FIT files come from a built-in
-  encoder). Works with no setup. This is also the **Komoot** route: Komoot
-  has [no public upload API](https://support.komoot.com/hc/en-us/articles/10331570510618-komoot-API)
-  (partner integrations only, and its private API is off-limits per their
-  terms), but <https://www.komoot.com/upload> accepts many files at once —
-  download the zip, drop the files there, done. The disabled "Upload to
-  Komoot" button in the UI says exactly this.
-- **Upload to RideWithGPS** — connect your RideWithGPS account (OAuth) and
-  upload the selection to your library in one batch. Optional: needs a free
-  [RideWithGPS API client](https://ridewithgps.com/api/v1/doc) configured
-  once (see setup below).
+  encoder). Works with no setup.
+- To move rides into **Komoot** or **RideWithGPS**, download the zip and drop
+  the files onto their upload pages — <https://www.komoot.com/upload> and
+  <https://ridewithgps.com/upload> both accept many files at once. (Neither
+  offers a public upload API, so this manual batch is the reliable route.)
 
 ### 🔀 Merge rides
 Combine multiple rides into one new activity:
@@ -139,35 +134,6 @@ SESSION_SECRET=<openssl rand -base64 32>
 Get the Client ID/Secret at <https://www.strava.com/settings/api>
 (Authorization Callback Domain: `localhost`).
 
-### Optional: RideWithGPS upload
-
-To enable **Upload to RideWithGPS**, register a free API client on your
-RideWithGPS account:
-
-1. Sign in at <https://ridewithgps.com/api> and open your **Account
-   Settings → Developers**.
-2. Create a new **API client**.
-3. On that client, turn on / configure **OAuth** — the plain API key is not
-   enough, this app authenticates with OAuth.
-4. Set the OAuth **Redirect URI** to `<your app URL>/api/rwgps/auth/callback`
-   (e.g. `http://localhost:3000/api/rwgps/auth/callback`).
-5. Copy the **OAuth Client ID** and **OAuth Client Secret** into `.env.local`:
-
-```env
-RWGPS_CLIENT_ID=...        # OAuth Client ID
-RWGPS_CLIENT_SECRET=...    # OAuth Client Secret
-# leave blank unless uploads fail and your client shows a separate API key:
-RWGPS_API_KEY=
-```
-
-The first-run setup wizard also has an optional RideWithGPS section that
-writes these for you. Once configured, connect your RideWithGPS account from
-**Preferences** (top-right) — after that it shows there like Strava, and the
-**Upload to RideWithGPS** button in the Batch edit tab is enabled.
-
-Without credentials the upload stays disabled — the GPX/FIT zip downloads
-always work.
-
 ---
 
 ## Strava rate limits
@@ -193,9 +159,8 @@ Strava's public API has **no delete endpoint** and **no native merge**. So:
 Next.js (App Router) · React · TypeScript · Tailwind CSS · Geist · lucide-react ·
 react-day-picker · iron-session · fit-file-parser · Leaflet +
 OpenStreetMap (Inspector map + tiles) · OpenStreetMap/Nominatim
-(reverse geocoding) · fflate (zip export) · RideWithGPS API (optional batch
-upload). See [CONTRIBUTING.md](CONTRIBUTING.md) for the project layout and
-how to help.
+(reverse geocoding) · fflate (zip export). See
+[CONTRIBUTING.md](CONTRIBUTING.md) for the project layout and how to help.
 
 ## 🤖 Vibe coded with Claude
 

@@ -1,24 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { apiFetch, loginHref, rwgpsLoginHref } from "@/lib/api";
+import { useState } from "react";
+import { apiFetch, loginHref } from "@/lib/api";
 import {
   AlertTriangle,
-  Check,
   KeyRound,
-  Link2,
   Loader2,
   LogOut,
   ShieldOff,
   Trash2,
   User,
 } from "lucide-react";
-
-type RwgpsStatus = {
-  configured: boolean;
-  connected: boolean;
-  name: string | null;
-};
 
 /**
  * The Preferences tab body. Formerly a modal (SettingsModal); now a panel
@@ -34,14 +26,6 @@ export default function PreferencesPanel({
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [rwgps, setRwgps] = useState<RwgpsStatus | null>(null);
-
-  useEffect(() => {
-    apiFetch("/api/rwgps/me")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d && setRwgps(d as RwgpsStatus))
-      .catch(() => {});
-  }, []);
 
   async function reauthorize() {
     if (
@@ -77,14 +61,6 @@ export default function PreferencesPanel({
     location.href = "/";
   }
 
-  async function disconnectRwgps() {
-    setBusy("rwgps");
-    await apiFetch("/api/rwgps/auth/logout", { method: "POST" }).catch(() => {});
-    setRwgps((s) => (s ? { ...s, connected: false, name: null } : s));
-    setBusy(null);
-    setMessage("Disconnected from RideWithGPS.");
-  }
-
   function clearGeoCache() {
     if (!confirm("Clear the local reverse-geocoding cache?")) return;
     try {
@@ -117,49 +93,6 @@ export default function PreferencesPanel({
           Logout
         </button>
       </div>
-
-      {(rwgps?.configured ?? false) && (
-        <>
-          <p className="!mt-5 px-1 text-xs font-medium uppercase tracking-wider text-[color:var(--fg-muted)]">
-            Connected services
-          </p>
-          {rwgps!.connected ? (
-            <PrefRow
-              icon={<Check className="h-4 w-4 text-sky-600" />}
-              title={`RideWithGPS — connected${rwgps!.name ? ` as ${rwgps!.name}` : ""}`}
-              subtitle="Upload activities to your RideWithGPS library from the Batch edit tab."
-              action={
-                <button
-                  onClick={disconnectRwgps}
-                  disabled={busy !== null}
-                  className="rounded-full border border-red-500/50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-500/10 disabled:opacity-50"
-                >
-                  {busy === "rwgps" ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    "Disconnect"
-                  )}
-                </button>
-              }
-            />
-          ) : (
-            <PrefRow
-              icon={<Link2 className="h-4 w-4 text-sky-600" />}
-              title="Connect RideWithGPS"
-              subtitle="Authorize your RideWithGPS account to upload activities to your library."
-              action={
-                <a
-                  href={rwgpsLoginHref()}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-sky-600 px-3 py-1 text-xs font-semibold !text-white transition-colors hover:bg-sky-700"
-                >
-                  <Link2 className="h-3 w-3" />
-                  Connect
-                </a>
-              }
-            />
-          )}
-        </>
-      )}
 
       <p className="!mt-5 px-1 text-xs font-medium uppercase tracking-wider text-[color:var(--fg-muted)]">
         Strava account
