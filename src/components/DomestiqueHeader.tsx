@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Wordmark from "./Wordmark";
 
 export type HeaderTab = { id: string; label: string };
@@ -15,12 +15,17 @@ const containerStyle: CSSProperties = {
   paddingRight: CONTAINER_PAD,
 };
 
+/** Header band height — the tabs start at this y (Figma: tab top = 335px). */
+const HEADER_H = 335;
+const HEADER_PT = 28; // pt-7
+
 /**
- * Brand header used by both the standalone app and the WordPress plugin:
- * the big pink "Domestique" wordmark + tagline on the dark espresso band,
- * then a sticky "archive folder" tab bar. When the page scrolls, the
- * wordmark slides up behind the tab bar, which pins to the top so only the
- * content below keeps scrolling.
+ * Brand header: the big pink "Domestique" wordmark + tagline on the dark
+ * espresso band, then a sticky "archive folder" tab bar. On scroll the header
+ * slides up, but a fixed "cap" keeps the top half of the wordmark visible and
+ * the tab bar pins right below it (at the wordmark's vertical middle); only
+ * the content below keeps scrolling. The cap is a clipped clone of the header
+ * top, so the transition is seamless with no JS animation.
  */
 export default function DomestiqueHeader({
   leftTabs,
@@ -35,20 +40,57 @@ export default function DomestiqueHeader({
   onChange: (id: string) => void;
   showWordmark?: boolean;
 }) {
+  const logoRef = useRef<HTMLDivElement>(null);
+  // How much of the header stays pinned on scroll: top padding + half the
+  // rendered wordmark height. The tab bar pins at this offset.
+  const [capH, setCapH] = useState(130);
+  useEffect(() => {
+    if (!showWordmark) return;
+    const measure = () => {
+      const h = logoRef.current?.getBoundingClientRect().height ?? 0;
+      if (h) setCapH(Math.round(HEADER_PT + h / 2));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [showWordmark]);
+
   return (
     <>
       {showWordmark && (
-        <header className="bg-[color:var(--header-bg)] text-[color:var(--accent)]">
-          <div style={containerStyle} className="pt-5 md:pt-7">
-            <Wordmark className="block h-auto w-full" />
-            <p className="mt-1 text-[24px] font-bold uppercase leading-[31px] text-[color:var(--accent)]">
-              Does the dirty work for your rides
-            </p>
+        <>
+          {/* fixed cap: clipped clone of the header top, revealed as the real
+              header scrolls up so the wordmark's top half stays pinned. */}
+          <div
+            aria-hidden
+            className="fixed inset-x-0 top-0 z-20 overflow-hidden bg-[color:var(--header-bg)] text-[color:var(--accent)]"
+            style={{ height: capH }}
+          >
+            <div style={containerStyle} className="pt-7">
+              <Wordmark className="block h-auto w-full" />
+            </div>
           </div>
-        </header>
+
+          <header
+            className="relative z-[25] bg-[color:var(--header-bg)] text-[color:var(--accent)]"
+            style={{ height: HEADER_H }}
+          >
+            <div style={containerStyle} className="pt-7">
+              <div ref={logoRef}>
+                <Wordmark className="block h-auto w-full" />
+              </div>
+              <p className="mt-1 text-[24px] font-bold uppercase leading-[31px] text-[color:var(--accent)]">
+                Does the dirty work for your rides
+              </p>
+            </div>
+          </header>
+        </>
       )}
 
-      <nav className="sticky top-0 z-30 bg-[color:var(--header-bg)]">
+      <nav
+        className="sticky z-30 bg-[color:var(--header-bg)]"
+        style={{ top: showWordmark ? capH : 0 }}
+      >
         <div style={containerStyle}>
           <div className="relative flex items-end pl-[5px] pt-3">
             {leftTabs.map((t, i) => (
