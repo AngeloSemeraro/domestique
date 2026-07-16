@@ -121,6 +121,7 @@ export async function rwgpsUploadTrip(
       body: attempt.fd,
     });
     const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    console.log(`[rwgps] POST ${attempt.url} -> ${res.status}`);
     if (res.ok) {
       const trip = (data.trip ?? data) as { id?: number };
       return {

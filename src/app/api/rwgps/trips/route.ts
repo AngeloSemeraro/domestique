@@ -34,6 +34,11 @@ export async function POST(req: NextRequest) {
     );
   }
   const result = await rwgpsUploadTrip(token, body.gpx, body.name, body.description);
+  // TEMP diagnostic — the real RideWithGPS rejection reason
+  console.log(
+    `[rwgps/trips] upload status=${result.status} ok=${result.ok} ` +
+      `error=${JSON.stringify(result.error)} raw=${JSON.stringify(result.raw).slice(0, 800)}`
+  );
   if (!result.ok) {
     return NextResponse.json(
       { error: result.error ?? "upload failed", raw: result.raw },
