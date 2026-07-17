@@ -420,6 +420,66 @@ export default function AnalyzerTab({
           )}
 
           <section className="animate-fade-in rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-4 md:p-5 shadow-sm">
+            <h3 className="mb-3 font-semibold tracking-tight">Charts</h3>
+            <div className="space-y-4">
+              <StreamChart
+                title="Speed"
+                unit="km/h"
+                color="#ef95b0"
+                icon={<ActivityIcon className="h-3.5 w-3.5" />}
+                series={speedSeries}
+                runs={analysis.runs}
+                totalPoints={file.point_count}
+                seamIndices={file.seamIndices}
+                viewRange={viewRange}
+                hoverIdx={hoverIdx}
+                onHover={setHoverIdx}
+              />
+              {analysis.hasHR && (
+                <StreamChart
+                  title="Heart rate"
+                  unit="bpm"
+                  color="#ef4444"
+                  icon={<Heart className="h-3.5 w-3.5" />}
+                  series={(file.streams.heartrate?.data ?? []).map((v) =>
+                    typeof v === "number" ? v : null
+                  )}
+                  runs={analysis.runs}
+                  totalPoints={file.point_count}
+                  seamIndices={file.seamIndices}
+                  viewRange={viewRange}
+                  hoverIdx={hoverIdx}
+                  onHover={setHoverIdx}
+                />
+              )}
+              {analysis.hasCad && (
+                <StreamChart
+                  title="Cadence"
+                  unit="rpm"
+                  color="#10b981"
+                  icon={<RotateCcw className="h-3.5 w-3.5" />}
+                  series={(file.streams.cadence?.data ?? []).map((v) =>
+                    typeof v === "number" ? v : null
+                  )}
+                  runs={analysis.runs}
+                  totalPoints={file.point_count}
+                  seamIndices={file.seamIndices}
+                  viewRange={viewRange}
+                  hoverIdx={hoverIdx}
+                  onHover={setHoverIdx}
+                />
+              )}
+            </div>
+            <p className="mt-2 text-xs text-[color:var(--fg-muted)]">
+              <span className="inline-block h-2 w-3 rounded bg-strava align-middle"></span>{" "}
+              kept ·{" "}
+              <span className="inline-block h-2 w-3 rounded bg-[color:var(--fg-muted)]/30 align-middle"></span>{" "}
+              dropped · hover to pin the position on the map
+              {viewRange && " · charts follow the elevation zoom window"}
+            </p>
+          </section>
+
+          <section className="animate-fade-in rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-4 md:p-5 shadow-sm">
             <div className="mb-3 flex items-center justify-between gap-2">
               <h3 className="font-semibold tracking-tight">Movement filter</h3>
               <button
@@ -587,63 +647,6 @@ export default function AnalyzerTab({
                 bad={analysis.totalSec > analysis.keptSec}
               />
             </div>
-          </section>
-
-          <section className="animate-fade-in rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-4 md:p-5 shadow-sm">
-            <h3 className="mb-3 font-semibold tracking-tight">Charts</h3>
-            <div className="space-y-4">
-              <StreamChart
-                title="Speed"
-                unit="km/h"
-                color="#ef95b0"
-                icon={<ActivityIcon className="h-3.5 w-3.5" />}
-                series={speedSeries}
-                runs={analysis.runs}
-                totalPoints={file.point_count}
-                seamIndices={file.seamIndices}
-                viewRange={viewRange}
-                hoverIdx={hoverIdx}
-              />
-              {analysis.hasHR && (
-                <StreamChart
-                  title="Heart rate"
-                  unit="bpm"
-                  color="#ef4444"
-                  icon={<Heart className="h-3.5 w-3.5" />}
-                  series={(file.streams.heartrate?.data ?? []).map((v) =>
-                    typeof v === "number" ? v : null
-                  )}
-                  runs={analysis.runs}
-                  totalPoints={file.point_count}
-                  seamIndices={file.seamIndices}
-                  viewRange={viewRange}
-                  hoverIdx={hoverIdx}
-                />
-              )}
-              {analysis.hasCad && (
-                <StreamChart
-                  title="Cadence"
-                  unit="rpm"
-                  color="#10b981"
-                  icon={<RotateCcw className="h-3.5 w-3.5" />}
-                  series={(file.streams.cadence?.data ?? []).map((v) =>
-                    typeof v === "number" ? v : null
-                  )}
-                  runs={analysis.runs}
-                  totalPoints={file.point_count}
-                  seamIndices={file.seamIndices}
-                  viewRange={viewRange}
-                  hoverIdx={hoverIdx}
-                />
-              )}
-            </div>
-            <p className="mt-2 text-xs text-[color:var(--fg-muted)]">
-              <span className="inline-block h-2 w-3 rounded bg-strava align-middle"></span>{" "}
-              kept ·{" "}
-              <span className="inline-block h-2 w-3 rounded bg-[color:var(--fg-muted)]/30 align-middle"></span>{" "}
-              dropped
-              {viewRange && " · charts follow the elevation zoom window"}
-            </p>
           </section>
 
           <section className="animate-fade-in rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-4 md:p-5 shadow-sm">
@@ -816,6 +819,7 @@ function StreamChart({
   seamIndices,
   viewRange,
   hoverIdx,
+  onHover,
 }: {
   title: string;
   unit: string;
@@ -828,6 +832,8 @@ function StreamChart({
   /** Zoom window shared with the elevation profile; null = full track. */
   viewRange?: [number, number] | null;
   hoverIdx?: number | null;
+  /** Hovering the chart drives the shared crosshair on the map + siblings. */
+  onHover?: (idx: number | null) => void;
 }) {
   const W = 1000;
   const H = 80;
@@ -836,6 +842,26 @@ function StreamChart({
   const a = viewRange ? Math.max(0, Math.min(viewRange[0], last)) : 0;
   const b = viewRange ? Math.max(a, Math.min(viewRange[1], last)) : last;
   const step = Math.max(1, Math.ceil((b - a + 1) / targetSamples));
+
+  // Map a pointer position to the nearest track index within the window.
+  const idxFromClientX = (clientX: number, el: SVGSVGElement): number => {
+    const rect = el.getBoundingClientRect();
+    const frac = rect.width > 0 ? (clientX - rect.left) / rect.width : 0;
+    return Math.round(a + Math.max(0, Math.min(1, frac)) * (b - a));
+  };
+  // Nearest finite value to hoverIdx (series has gaps at teleports), for the
+  // marker dot + readout.
+  const hoverActive =
+    typeof hoverIdx === "number" && hoverIdx >= a && hoverIdx <= b;
+  let hoverVal: number | null = null;
+  if (hoverActive) {
+    for (let d = 0; d <= 4; d++) {
+      const lv = series[hoverIdx! - d];
+      const rv = series[hoverIdx! + d];
+      if (typeof lv === "number" && Number.isFinite(lv)) { hoverVal = lv; break; }
+      if (typeof rv === "number" && Number.isFinite(rv)) { hoverVal = rv; break; }
+    }
+  }
 
   const samples: Array<{ x: number; v: number | null; kept: boolean }> = [];
   for (let i = a; i <= b; i += step) {
@@ -888,13 +914,23 @@ function StreamChart({
           {title}
         </span>
         <span className="font-mono text-[color:var(--fg-muted)]">
-          {min.toFixed(0)} – {max.toFixed(0)} {unit}
+          {hoverVal !== null ? (
+            <span className="font-semibold" style={{ color }}>
+              {hoverVal.toFixed(0)} {unit}
+            </span>
+          ) : (
+            <>
+              {min.toFixed(0)} – {max.toFixed(0)} {unit}
+            </>
+          )}
         </span>
       </div>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
-        className="block h-16 w-full rounded bg-[color:var(--bg-input)]"
+        className="block h-16 w-full cursor-crosshair touch-none rounded bg-[color:var(--bg-input)]"
+        onPointerMove={(e) => onHover?.(idxFromClientX(e.clientX, e.currentTarget))}
+        onPointerLeave={() => onHover?.(null)}
       >
         {segs.map((s, i) => (
           <path
