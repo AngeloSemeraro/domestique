@@ -760,11 +760,8 @@ function NumberField({
   onChange: (n: number) => void;
 }) {
   return (
-    <label
-      className="flex items-center justify-between gap-2"
-      title={hint}
-    >
-      <span className="text-[color:var(--fg-muted)] whitespace-nowrap">
+    <label className="flex flex-col gap-1" title={hint}>
+      <span className="text-[10px] font-medium uppercase tracking-wider text-[color:var(--fg-muted)]">
         {label}
       </span>
       <input
@@ -772,7 +769,7 @@ function NumberField({
         step={step}
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-        className="w-16 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-2 py-1 text-right"
+        className="w-full rounded-md border border-[color:var(--border)] bg-[color:var(--bg-input)] px-2 py-1 text-right tabular-nums"
       />
     </label>
   );
