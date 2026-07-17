@@ -10,3 +10,6 @@ next-env.d.ts
 
 # macOS launcher runtime log
 .domestique-launch.log
+
+# TypeScript incremental build info
+*.tsbuildinfo

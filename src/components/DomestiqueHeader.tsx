@@ -15,17 +15,23 @@ const containerStyle: CSSProperties = {
   paddingRight: CONTAINER_PAD,
 };
 
-/** Header band height — the tabs start at this y (Figma: tab top = 335px). */
+/** Where the tabs start unscrolled (Figma: tab top = 335px). */
 const HEADER_H = 335;
 const HEADER_PT = 28; // pt-7
+const TAB_H = 71; // folder-tab height
+const SPINE_H = 17; // pink shelf net height (18px, tucked 1px behind tabs)
+/** The fixed espresso band must reach the bottom of the pink spine at the
+ *  tabs' *lowest* (unscrolled) position, so it always backs the transparent
+ *  tabs no matter how far they've travelled up. */
+const HEADER_FIXED_H = HEADER_H + TAB_H + SPINE_H; // 423
 
 /**
- * Brand header: the big pink "Domestique" wordmark + tagline on the dark
- * espresso band, then a sticky "archive folder" tab bar. On scroll the header
- * slides up, but a fixed "cap" keeps the top half of the wordmark visible and
- * the tab bar pins right below it (at the wordmark's vertical middle); only
- * the content below keeps scrolling. The cap is a clipped clone of the header
- * top, so the transition is seamless with no JS animation.
+ * Brand header. The pink "Domestique" wordmark + tagline sit on a *fixed*
+ * espresso band that never moves. The "archive folder" tab bar starts at
+ * 335px and, on scroll, slides up with the page until it reaches the
+ * wordmark's vertical middle, where it pins. The tab bar has a **transparent**
+ * background, so once pinned the fixed wordmark shows through behind it and
+ * the page content scrolls underneath the whole band.
  */
 export default function DomestiqueHeader({
   leftTabs,
@@ -41,58 +47,75 @@ export default function DomestiqueHeader({
   showWordmark?: boolean;
 }) {
   const logoRef = useRef<HTMLDivElement>(null);
-  // How much of the header stays pinned on scroll: top padding + half the
-  // rendered wordmark height. The tab bar pins at this offset.
+  const taglineRef = useRef<HTMLParagraphElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  // Where the tabs pin: top padding + half the rendered wordmark height, i.e.
+  // the wordmark's vertical middle.
   const [capH, setCapH] = useState(130);
+  // Height of the fixed espresso band. It tracks the bottom of the pink shelf
+  // as the tabs slide up and pin, so content always emerges right under the
+  // tabs — never leaving an empty dark gap — while still keeping the fixed
+  // tagline sitting on espresso.
+  const [bandH, setBandH] = useState(HEADER_FIXED_H);
   useEffect(() => {
     if (!showWordmark) return;
+    // Smallest the band may shrink to: keep the fixed tagline on espresso.
+    let minBand = HEADER_PT + 200;
     const measure = () => {
       const h = logoRef.current?.getBoundingClientRect().height ?? 0;
       if (h) setCapH(Math.round(HEADER_PT + h / 2));
+      const tb = taglineRef.current?.getBoundingClientRect().bottom ?? 0;
+      if (tb) minBand = Math.ceil(tb + 8);
+      syncBand();
+    };
+    const syncBand = () => {
+      // nav's viewport bottom = bottom of the pink shelf = where content starts.
+      const b = navRef.current?.getBoundingClientRect().bottom ?? HEADER_FIXED_H;
+      setBandH(Math.max(Math.ceil(b), minBand));
     };
     measure();
     window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
+    window.addEventListener("scroll", syncBand, { passive: true });
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", syncBand);
+    };
   }, [showWordmark]);
 
   return (
     <>
       {showWordmark && (
         <>
-          {/* fixed cap: clipped clone of the header top, revealed as the real
-              header scrolls up so the wordmark's top half stays pinned. */}
-          <div
-            aria-hidden
-            className="fixed inset-x-0 top-0 z-20 overflow-hidden bg-[color:var(--header-bg)] text-[color:var(--accent)]"
-            style={{ height: capH }}
-          >
-            <div style={containerStyle} className="pt-7">
-              <Wordmark className="block h-auto w-full" />
-            </div>
-          </div>
-
+          {/* Fixed espresso band: logo + tagline stay put; the band reaches
+              down far enough to sit behind the tabs at every scroll position. */}
           <header
-            className="relative z-[25] bg-[color:var(--header-bg)] text-[color:var(--accent)]"
-            style={{ height: HEADER_H }}
+            className="fixed inset-x-0 top-0 z-10 bg-[color:var(--header-bg)] text-[color:var(--accent)]"
+            style={{ height: bandH }}
           >
             <div style={containerStyle} className="pt-7">
               <div ref={logoRef}>
                 <Wordmark className="block h-auto w-full" />
               </div>
-              <p className="mt-1 text-[24px] font-bold uppercase leading-[31px] text-[color:var(--accent)]">
+              <p
+                ref={taglineRef}
+                className="mt-1 text-[24px] font-bold uppercase leading-[31px] text-[color:var(--accent)]"
+              >
                 Does the dirty work for your rides
               </p>
             </div>
           </header>
+          {/* Spacer that pushes the (out-of-flow) tab bar down to 335px. */}
+          <div aria-hidden style={{ height: HEADER_H }} />
         </>
       )}
 
       <nav
-        className="sticky z-30 bg-[color:var(--header-bg)]"
+        ref={navRef}
+        className="sticky z-30 bg-transparent"
         style={{ top: showWordmark ? capH : 0 }}
       >
         <div style={containerStyle}>
-          <div className="relative flex items-end pl-[5px] pt-3">
+          <div className="relative flex items-end pl-[5px]">
             {leftTabs.map((t, i) => (
               <FolderTab
                 key={t.id}
