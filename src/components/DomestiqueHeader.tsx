@@ -52,18 +52,27 @@ export default function DomestiqueHeader({
   // Where the tabs pin: top padding + half the rendered wordmark height, i.e.
   // the wordmark's vertical middle.
   const [capH, setCapH] = useState(130);
+  const capHRef = useRef(130);
   // Height of the fixed espresso band. It tracks the bottom of the pink shelf
   // as the tabs slide up and pin, so content always emerges right under the
   // tabs — never leaving an empty dark gap — while still keeping the fixed
   // tagline sitting on espresso.
   const [bandH, setBandH] = useState(HEADER_FIXED_H);
+  // Wordmark opacity, driven by scroll: full while the tabs sit at rest, easing
+  // down to 0.82 by the time they pin, so the pink tabs read cleanly over the
+  // (same-pink) wordmark behind them. Scroll up restores it.
+  const [logoOpacity, setLogoOpacity] = useState(1);
   useEffect(() => {
     if (!showWordmark) return;
     // Smallest the band may shrink to: keep the fixed tagline on espresso.
     let minBand = HEADER_PT + 200;
     const measure = () => {
       const h = logoRef.current?.getBoundingClientRect().height ?? 0;
-      if (h) setCapH(Math.round(HEADER_PT + h / 2));
+      if (h) {
+        const cap = Math.round(HEADER_PT + h / 2);
+        capHRef.current = cap;
+        setCapH(cap);
+      }
       const tb = taglineRef.current?.getBoundingClientRect().bottom ?? 0;
       if (tb) minBand = Math.ceil(tb + 8);
       syncBand();
@@ -72,6 +81,10 @@ export default function DomestiqueHeader({
       // nav's viewport bottom = bottom of the pink shelf = where content starts.
       const b = navRef.current?.getBoundingClientRect().bottom ?? HEADER_FIXED_H;
       setBandH(Math.max(Math.ceil(b), minBand));
+      // Fade the wordmark across the pin travel (scroll 0 → HEADER_H - capH).
+      const pinScroll = Math.max(1, HEADER_H - capHRef.current);
+      const prog = Math.max(0, Math.min(1, window.scrollY / pinScroll));
+      setLogoOpacity(1 - 0.18 * prog);
     };
     measure();
     window.addEventListener("resize", measure);
@@ -89,11 +102,11 @@ export default function DomestiqueHeader({
           {/* Fixed espresso band: logo + tagline stay put; the band reaches
               down far enough to sit behind the tabs at every scroll position. */}
           <header
-            className="fixed inset-x-0 top-0 z-10 bg-[color:var(--header-bg)] text-[color:var(--accent)]"
+            className="fixed inset-x-0 top-0 z-40 bg-[color:var(--header-bg)] text-[color:var(--accent)]"
             style={{ height: bandH }}
           >
             <div style={containerStyle} className="pt-7">
-              <div ref={logoRef}>
+              <div ref={logoRef} style={{ opacity: logoOpacity }}>
                 <Wordmark className="block h-auto w-full" />
               </div>
               <p
@@ -111,7 +124,7 @@ export default function DomestiqueHeader({
 
       <nav
         ref={navRef}
-        className="sticky z-30 bg-transparent"
+        className="sticky z-50 bg-transparent"
         style={{ top: showWordmark ? capH : 0 }}
       >
         <div style={containerStyle}>
