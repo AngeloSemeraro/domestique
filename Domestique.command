@@ -9,10 +9,32 @@ cd "$(cd "$(dirname "$0")" && pwd)" || exit 1
 
 URL="http://localhost:3000"
 
-# Già in esecuzione? Apri solo il browser.
+# Apre Domestique in una finestra dedicata e senza barra indirizzi
+# (Chrome/Brave/Edge/Chromium in modalità --app), con un profilo separato così
+# è un'istanza isolata; ripiega sul browser predefinito se nessuno è presente.
+open_app() {
+  local url="$1"
+  local profile="$HOME/Library/Application Support/Domestique/browser"
+  local bin
+  for bin in \
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+    "$HOME/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+    "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" \
+    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" \
+    "/Applications/Chromium.app/Contents/MacOS/Chromium"; do
+    if [ -x "$bin" ]; then
+      "$bin" --app="$url" --user-data-dir="$profile" \
+        --no-first-run --no-default-browser-check >/dev/null 2>&1 &
+      return 0
+    fi
+  done
+  open "$url"
+}
+
+# Già in esecuzione? Apri solo la finestra.
 if lsof -ti tcp:3000 >/dev/null 2>&1; then
-  echo "Domestique è già avviato — apro il browser."
-  open "$URL"
+  echo "Domestique è già avviato — apro la finestra."
+  open_app "$URL"
   exit 0
 fi
 
@@ -34,11 +56,11 @@ if [ ! -d node_modules ]; then
   }
 fi
 
-# Appena il server risponde, apri il browser predefinito.
+# Appena il server risponde, apri la finestra dell'app.
 (
   for _ in $(seq 1 90); do
     if curl -s -o /dev/null "$URL"; then
-      open "$URL"
+      open_app "$URL"
       break
     fi
     sleep 1

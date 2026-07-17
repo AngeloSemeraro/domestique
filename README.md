@@ -117,8 +117,11 @@ After the one-time clone, you don't need the terminal to start it:
 - **`Domestique.command`** — same thing but in a visible Terminal window, handy
   for watching logs; press `Ctrl+C` to stop.
 
-Both start the server and open your default browser at `localhost:3000`, and
-install dependencies automatically on first run.
+Both start the server and open Domestique in a **dedicated app window** —
+Chrome, Brave, Edge or Chromium in `--app` mode (chromeless, its own Dock
+icon, an isolated profile so it never mixes with your normal browsing). If no
+Chromium-family browser is installed they fall back to your default browser.
+Dependencies install automatically on first run.
 
 ### Manual setup (optional)
 

@@ -1,8 +1,9 @@
 #!/bin/bash
 #
-# Domestique.app launcher — starts the local server and opens the default
-# browser at http://localhost:3000, with no Terminal window. The app stays
-# in the Dock while it runs; right-click its Dock icon -> Quit to stop it.
+# Domestique.app launcher — starts the local server and opens Domestique in a
+# dedicated, chromeless app window (Chrome/Brave/Edge/Chromium in --app mode),
+# falling back to the default browser. No Terminal window. The app stays in
+# the Dock while it runs; right-click its Dock icon -> Quit to stop it.
 #
 # The bundle lives at <repo>/Domestique.app, so the repo root is three
 # levels up from this executable.
@@ -20,9 +21,33 @@ dialog() {
   /usr/bin/osascript -e "display dialog \"$1\" buttons {\"OK\"} default button 1 with icon $2 with title \"Domestique\"" >/dev/null 2>&1
 }
 
-# Already running? Just open the browser.
+# Open the app in a standalone, chromeless window using a Chromium-family
+# browser's --app mode. A dedicated --user-data-dir launches an isolated
+# instance (so --app is honoured even when the browser is already running and
+# the window never mixes with the user's normal browsing). Falls back to the
+# default browser when no Chromium-family browser is installed.
+open_app() {
+  local url="$1"
+  local profile="$HOME/Library/Application Support/Domestique/browser"
+  local bin
+  for bin in \
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+    "$HOME/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+    "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" \
+    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" \
+    "/Applications/Chromium.app/Contents/MacOS/Chromium"; do
+    if [ -x "$bin" ]; then
+      "$bin" --app="$url" --user-data-dir="$profile" \
+        --no-first-run --no-default-browser-check >/dev/null 2>&1 &
+      return 0
+    fi
+  done
+  open "$url"
+}
+
+# Already running? Just open the window.
 if /usr/sbin/lsof -ti tcp:3000 >/dev/null 2>&1; then
-  open "$URL"
+  open_app "$URL"
   exit 0
 fi
 
@@ -42,11 +67,11 @@ if [ ! -d node_modules ]; then
   fi
 fi
 
-# Open the browser as soon as the server answers.
+# Open the app window as soon as the server answers.
 (
   for _ in $(seq 1 90); do
     if /usr/bin/curl -s -o /dev/null "$URL"; then
-      open "$URL"
+      open_app "$URL"
       break
     fi
     sleep 1
