@@ -9,26 +9,15 @@ cd "$(cd "$(dirname "$0")" && pwd)" || exit 1
 
 URL="http://localhost:3000"
 
-# Apre Domestique in una finestra dedicata e senza barra indirizzi
-# (Chrome/Brave/Edge/Chromium in modalità --app), con un profilo separato così
-# è un'istanza isolata; ripiega sul browser predefinito se nessuno è presente.
+# Apre Domestique in Safari (ripiega sul browser predefinito).
+# Per una finestra dedicata con la nostra icona: in Safari, File → Aggiungi al Dock.
 open_app() {
   local url="$1"
-  local profile="$HOME/Library/Application Support/Domestique/browser"
-  local bin
-  for bin in \
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-    "$HOME/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-    "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" \
-    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" \
-    "/Applications/Chromium.app/Contents/MacOS/Chromium"; do
-    if [ -x "$bin" ]; then
-      "$bin" --app="$url" --user-data-dir="$profile" \
-        --no-first-run --no-default-browser-check >/dev/null 2>&1 &
-      return 0
-    fi
-  done
-  open "$url"
+  if [ -d "/Applications/Safari.app" ]; then
+    open -a Safari "$url"
+  else
+    open "$url"
+  fi
 }
 
 # Già in esecuzione? Apri solo la finestra.
