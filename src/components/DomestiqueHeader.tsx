@@ -47,25 +47,22 @@ export default function DomestiqueHeader({
   showWordmark?: boolean;
 }) {
   const logoRef = useRef<HTMLDivElement>(null);
-  const taglineRef = useRef<HTMLParagraphElement>(null);
   const navRef = useRef<HTMLElement>(null);
   // Where the tabs pin: top padding + half the rendered wordmark height, i.e.
   // the wordmark's vertical middle.
   const [capH, setCapH] = useState(130);
   const capHRef = useRef(130);
   // Height of the fixed espresso band. It tracks the bottom of the pink shelf
-  // as the tabs slide up and pin, so content always emerges right under the
-  // tabs — never leaving an empty dark gap — while still keeping the fixed
-  // tagline sitting on espresso.
+  // as the tabs slide up and pin: the band shrinks with the tabs so page
+  // content always emerges right under the pink shelf, and the tagline (which
+  // scrolls in normal flow) slides up under the band and out of sight.
   const [bandH, setBandH] = useState(HEADER_FIXED_H);
   // Wordmark opacity, driven by scroll: full while the tabs sit at rest, easing
-  // down to 0.82 by the time they pin, so the pink tabs read cleanly over the
+  // down to 0.43 by the time they pin, so the pink tabs read cleanly over the
   // (same-pink) wordmark behind them. Scroll up restores it.
   const [logoOpacity, setLogoOpacity] = useState(1);
   useEffect(() => {
     if (!showWordmark) return;
-    // Smallest the band may shrink to: keep the fixed tagline on espresso.
-    let minBand = HEADER_PT + 200;
     const measure = () => {
       const h = logoRef.current?.getBoundingClientRect().height ?? 0;
       if (h) {
@@ -73,18 +70,16 @@ export default function DomestiqueHeader({
         capHRef.current = cap;
         setCapH(cap);
       }
-      const tb = taglineRef.current?.getBoundingClientRect().bottom ?? 0;
-      if (tb) minBand = Math.ceil(tb + 8);
       syncBand();
     };
     const syncBand = () => {
       // nav's viewport bottom = bottom of the pink shelf = where content starts.
       const b = navRef.current?.getBoundingClientRect().bottom ?? HEADER_FIXED_H;
-      setBandH(Math.max(Math.ceil(b), minBand));
+      setBandH(Math.max(1, Math.ceil(b)));
       // Fade the wordmark across the pin travel (scroll 0 → HEADER_H - capH).
       const pinScroll = Math.max(1, HEADER_H - capHRef.current);
       const prog = Math.max(0, Math.min(1, window.scrollY / pinScroll));
-      setLogoOpacity(1 - 0.18 * prog);
+      setLogoOpacity(1 - 0.57 * prog);
     };
     measure();
     window.addEventListener("resize", measure);
@@ -99,20 +94,19 @@ export default function DomestiqueHeader({
     <>
       {showWordmark && (
         <>
-          {/* Fixed espresso band: logo + tagline stay put; the band reaches
-              down far enough to sit behind the tabs at every scroll position. */}
+          {/* Fixed espresso band. It shrinks with the tabs as they pin, and
+              clips its contents (overflow-hidden): the tagline slides up out of
+              sight and the wordmark's foot tucks behind the pink shelf, so the
+              pinned header is just the dimmed wordmark + tabs + shelf. */}
           <header
-            className="fixed inset-x-0 top-0 z-40 bg-[color:var(--header-bg)] text-[color:var(--accent)]"
+            className="fixed inset-x-0 top-0 z-40 overflow-hidden bg-[color:var(--header-bg)] text-[color:var(--accent)]"
             style={{ height: bandH }}
           >
             <div style={containerStyle} className="pt-7">
               <div ref={logoRef} style={{ opacity: logoOpacity }}>
                 <Wordmark className="block h-auto w-full" />
               </div>
-              <p
-                ref={taglineRef}
-                className="mt-1 text-[24px] font-bold uppercase leading-[31px] text-[color:var(--accent)]"
-              >
+              <p className="mt-1 text-[24px] font-bold uppercase leading-[31px] text-[color:var(--accent)]">
                 Does the dirty work for your rides
               </p>
             </div>
