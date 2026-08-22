@@ -1,0 +1,22 @@
+[package]
+name = "domestique"
+version = "0.7.0"
+description = "Domestique — edit, merge and clean up your Strava rides"
+edition = "2021"
+rust-version = "1.77"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+url = "2"
+
+[[bin]]
+name = "domestique"
+path = "src/main.rs"
+
+[profile.release]
+strip = true
+lto = true
+opt-level = "s"

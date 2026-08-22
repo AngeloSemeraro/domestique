@@ -13,3 +13,7 @@ next-env.d.ts
 
 # TypeScript incremental build info
 *.tsbuildinfo
+
+# Tauri build artifacts
+src-tauri/target
+src-tauri/gen

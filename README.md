@@ -108,9 +108,25 @@ Open <http://localhost:3000>. On first run a **setup wizard** walks you through:
 Restart the dev server (`Ctrl+C`, then `npm run dev`), reload, and click
 **Connect with Strava**.
 
-### macOS: launch with a double-click
+### macOS: native desktop app (recommended)
 
-After the one-time clone, you don't need the terminal to start it:
+Build a real macOS app — one Dock icon that starts the server, shows a splash,
+then opens Domestique in a chromeless native window with the Domestique icon,
+and stops the server when you quit. It's a [Tauri](https://tauri.app) wrapper;
+see [`src-tauri/README.md`](src-tauri/README.md) for details.
+
+```bash
+npm install
+npm run tauri build
+```
+
+The app lands at `src-tauri/target/release/bundle/macos/Domestique.app` — drag
+it to **/Applications**. Requires [Rust](https://rustup.rs) and Xcode Command
+Line Tools installed once.
+
+### macOS: launch with a double-click (no build)
+
+Prefer not to build? Two zero-setup launchers sit in the repo:
 
 - **`Domestique.app`** — double-click it (it sits in the Dock while running;
   right-click its icon → **Quit** to stop). No Terminal window.
@@ -119,12 +135,6 @@ After the one-time clone, you don't need the terminal to start it:
 
 Both start the server and open Domestique in **Safari** (falling back to your
 default browser). Dependencies install automatically on first run.
-
-For a **standalone, chromeless window with the Domestique icon**, open it once
-in Safari and choose **File → Add to Dock** — Safari creates a real web app
-(its own window, no address bar, the Domestique icon). Launch it from the Dock
-afterwards; `Domestique.app` just needs to be running so the local server is
-up.
 
 ### Manual setup (optional)
 
