@@ -32,10 +32,23 @@ fn server_up() -> bool {
         .any(|a| TcpStream::connect_timeout(a, Duration::from_millis(300)).is_ok())
 }
 
-/// The repo root. `src-tauri` lives inside the repo, and CARGO_MANIFEST_DIR is
-/// baked at build time — so on this machine it points back at the checkout.
-/// (Move the repo → rebuild the app.)
+/// Locate the repo root (the checkout that has `node_modules` and `.next`).
+///
+/// Prefer deriving it from the running executable: Tauri builds the .app *inside*
+/// the repo (src-tauri/target/release/bundle/macos/…), so walking up from the
+/// binary finds the checkout even if the whole folder was moved after building.
+/// Fall back to the path baked at build time (CARGO_MANIFEST_DIR).
 fn repo_dir() -> PathBuf {
+    let is_repo = |p: &Path| p.join("package.json").exists() && p.join("node_modules").exists();
+
+    if let Ok(exe) = std::env::current_exe() {
+        for anc in exe.ancestors() {
+            if is_repo(anc) {
+                return anc.to_path_buf();
+            }
+        }
+    }
+
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .expect("src-tauri always has a parent")
