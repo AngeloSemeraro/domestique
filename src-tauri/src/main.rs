@@ -169,9 +169,25 @@ fn start_server(repo: &Path) -> Option<Child> {
         .ok()
 }
 
+/// Open the Strava login in the user's real browser. Apple/Google refuse their
+/// sign-in inside embedded webviews, so the desktop app sends the OAuth flow out
+/// to the system browser; the callback stashes the session and the webview polls
+/// `/api/auth/adopt` to claim it. Invoked from the login screen.
+#[tauri::command]
+fn open_login() {
+    let url = format!("http://localhost:{PORT}/api/auth/login?desktop=1");
+    #[cfg(target_os = "macos")]
+    let _ = Command::new("open").arg(&url).spawn();
+    #[cfg(target_os = "linux")]
+    let _ = Command::new("xdg-open").arg(&url).spawn();
+    #[cfg(target_os = "windows")]
+    let _ = Command::new("cmd").args(["/C", "start", "", &url]).spawn();
+}
+
 fn main() {
     tauri::Builder::default()
         .manage(ServerProcess(Mutex::new(None)))
+        .invoke_handler(tauri::generate_handler![open_login])
         .setup(|app| {
             let repo = repo_dir();
             // Start the server unless something already answers on the port.

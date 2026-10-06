@@ -1,6 +1,6 @@
-import { ArrowRight, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import AppLogo from "./AppLogo";
-import { loginHref } from "@/lib/api";
+import ConnectStrava from "./ConnectStrava";
 
 export default function LoginScreen({ error }: { error?: string }) {
   return (
@@ -23,13 +23,7 @@ export default function LoginScreen({ error }: { error?: string }) {
         </div>
       )}
 
-      <a
-        href={loginHref()}
-        className="group animate-fade-in inline-flex items-center gap-2 rounded-full bg-strava px-6 py-3 font-semibold !text-[color:var(--accent-fg)] shadow-lg shadow-strava/30 transition-all hover:scale-[1.02] hover:brightness-95 active:scale-[0.98]"
-      >
-        Connect with Strava
-        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-      </a>
+      <ConnectStrava />
     </main>
   );
 }
