@@ -32,6 +32,7 @@ const BUTTON_CLASS =
 export default function ConnectStrava() {
   const [isDesktop, setIsDesktop] = useState(false);
   const [waiting, setWaiting] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -57,16 +58,35 @@ export default function ConnectStrava() {
     }, 1500);
   }, []);
 
+  // Open the login in the system browser. Prefer the opener plugin; fall back to
+  // the custom command. Surface a message if neither is callable.
+  const openBrowser = useCallback(async () => {
+    const invoke = getInvoke();
+    if (!invoke) {
+      setErr("Could not reach the desktop bridge.");
+      return;
+    }
+    const url = "http://localhost:3000/api/auth/login?desktop=1";
+    try {
+      await invoke("plugin:opener|open_url", { url });
+    } catch {
+      try {
+        await invoke("open_login");
+      } catch (e2) {
+        setErr(`Couldn't open the browser: ${String(e2)}`);
+      }
+    }
+  }, []);
+
   const onDesktopClick = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
-      getInvoke()?.("open_login").catch(() => {
-        /* command unavailable — the help text offers a manual retry */
-      });
+      setErr(null);
+      void openBrowser();
       setWaiting(true);
       startPolling();
     },
-    [startPolling]
+    [openBrowser, startPolling]
   );
 
   if (!isDesktop) {
@@ -98,6 +118,9 @@ export default function ConnectStrava() {
           Complete the Strava login in your browser — this window will connect
           automatically. <button type="button" onClick={onDesktopClick} className="underline">Reopen</button>
         </p>
+      )}
+      {err && (
+        <p className="max-w-xs text-center text-sm text-red-500">{err}</p>
       )}
     </div>
   );

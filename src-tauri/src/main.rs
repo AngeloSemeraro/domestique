@@ -186,6 +186,7 @@ fn open_login() {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
         .manage(ServerProcess(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![open_login])
         .setup(|app| {
