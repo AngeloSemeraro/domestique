@@ -114,7 +114,8 @@ export default function PreferencesPanel({
   function clearGeoCache() {
     if (!confirm("Clear the local reverse-geocoding cache?")) return;
     try {
-      localStorage.removeItem("sbe.geocode.v1");
+      localStorage.removeItem("domestique.geocode.v1");
+      localStorage.removeItem("sbe.geocode.v1"); // legacy key
       setMessage("Geocoding cache cleared.");
     } catch {
       setMessage("Couldn't clear cache (localStorage disabled?).");

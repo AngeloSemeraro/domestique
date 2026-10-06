@@ -60,7 +60,7 @@ export default function TrackMap({
     const map = L.map(div, { zoomControl: true, attributionControl: true });
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
-      className: "sbe-basemap",
+      className: "domestique-basemap",
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
     }).addTo(map);
@@ -204,7 +204,7 @@ export default function TrackMap({
   return (
     <div
       ref={divRef}
-      className={`sbe-map relative w-full overflow-hidden rounded-xl border border-[color:var(--border)] ${
+      className={`domestique-map relative w-full overflow-hidden rounded-xl border border-[color:var(--border)] ${
         className ?? "h-80"
       }`}
     />

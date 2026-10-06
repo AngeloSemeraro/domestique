@@ -218,7 +218,7 @@ export default function AnalyzerTab({
           dataType: "tcx",
           name,
           description,
-          external_id: `sbe-analyzer-${Date.now()}`,
+          external_id: `domestique-analyzer-${Date.now()}`,
         }),
       });
       const upData = await up.json();

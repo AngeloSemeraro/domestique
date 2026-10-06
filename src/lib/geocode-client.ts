@@ -5,7 +5,7 @@ export type GeoLocation = {
   country: string | null;
 };
 
-const CACHE_KEY = "sbe.geocode.v1";
+const CACHE_KEY = "domestique.geocode.v1";
 const NEGATIVE_VALUE: GeoLocation = { city: null, state: null, country: null };
 
 type Cache = Record<string, GeoLocation>;

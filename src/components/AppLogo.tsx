@@ -5,7 +5,7 @@ import { logoSrc } from "@/lib/api";
  * login screen and onboarding wizard so the brand mark stays consistent.
  *
  * The source is `/icon.png` in the Next.js build (served from /public)
- * and whatever `window.SBE_BOOTSTRAP.iconUrl` points at in the WordPress
+ * and whatever `window.DOMESTIQUE_BOOTSTRAP.iconUrl` points at in the WordPress
  * plugin bundle. Uses a plain <img> in both cases — keeps the same
  * component working in both builds without pulling in next/image.
  */

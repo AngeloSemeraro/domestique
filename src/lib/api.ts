@@ -3,9 +3,9 @@
  * WordPress plugin bundle.
  *
  * In Next.js we hit `/api/...` routes directly. When the same React code
- * runs as the WP plugin's React bundle, `window.SBE_BOOTSTRAP` is present
+ * runs as the WP plugin's React bundle, `window.DOMESTIQUE_BOOTSTRAP` is present
  * (printed inline by the shortcode renderer) and points at the
- * `/wp-json/sbe/v1` REST root, with an `X-WP-Nonce` for auth.
+ * `/wp-json/domestique/v1` REST root, with an `X-WP-Nonce` for auth.
  *
  * This module rewrites any `/api/...` path to the right backend so the
  * component code stays identical between the two builds.
@@ -13,8 +13,8 @@
 
 declare global {
   interface Window {
-    SBE_BOOTSTRAP?: {
-      restRoot: string; // e.g. https://site.com/wp-json/sbe/v1
+    DOMESTIQUE_BOOTSTRAP?: {
+      restRoot: string; // e.g. https://site.com/wp-json/domestique/v1
       nonce: string;
       loginUrl: string; // already includes return URL
       logoutUrl: string;
@@ -27,7 +27,7 @@ declare global {
 }
 
 function bootstrap() {
-  return typeof window !== "undefined" ? window.SBE_BOOTSTRAP : undefined;
+  return typeof window !== "undefined" ? window.DOMESTIQUE_BOOTSTRAP : undefined;
 }
 
 /**

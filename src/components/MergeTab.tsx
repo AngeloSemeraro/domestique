@@ -267,7 +267,7 @@ export default function MergeTab({
           description:
             description ||
             `Merged from: ${sources.map((s) => s.name).join(", ")}`,
-          external_id: `sbe-merge-${Date.now()}`,
+          external_id: `domestique-merge-${Date.now()}`,
         }),
       });
       const upData = await up.json();
