@@ -124,18 +124,6 @@ The app lands at `src-tauri/target/release/bundle/macos/Domestique.app` — drag
 it to **/Applications**. Requires [Rust](https://rustup.rs) and Xcode Command
 Line Tools installed once.
 
-### macOS: launch with a double-click (no build)
-
-Prefer not to build? Two zero-setup launchers sit in the repo:
-
-- **`Domestique.app`** — double-click it (it sits in the Dock while running;
-  right-click its icon → **Quit** to stop). No Terminal window.
-- **`Domestique.command`** — same thing but in a visible Terminal window, handy
-  for watching logs; press `Ctrl+C` to stop.
-
-Both start the server and open Domestique in **Safari** (falling back to your
-default browser). Dependencies install automatically on first run.
-
 ### Manual setup (optional)
 
 If you'd rather skip the wizard, copy `.env.example` to `.env.local` and fill:

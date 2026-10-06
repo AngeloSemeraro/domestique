@@ -8,8 +8,8 @@ out
 .vercel
 next-env.d.ts
 
-# macOS launcher runtime log
-.domestique-launch.log
+# Desktop app runtime log
+.domestique-server.log
 
 # TypeScript incremental build info
 *.tsbuildinfo
