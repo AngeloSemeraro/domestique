@@ -177,7 +177,7 @@ fn start_server(repo: &Path) -> Option<Child> {
 fn open_login() {
     let url = format!("http://localhost:{PORT}/api/auth/login?desktop=1");
     #[cfg(target_os = "macos")]
-    let _ = Command::new("open").arg(&url).spawn();
+    let _ = Command::new("/usr/bin/open").arg(&url).spawn();
     #[cfg(target_os = "linux")]
     let _ = Command::new("xdg-open").arg(&url).spawn();
     #[cfg(target_os = "windows")]

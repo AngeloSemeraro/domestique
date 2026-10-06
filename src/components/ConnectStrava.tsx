@@ -4,11 +4,20 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { loginHref } from "@/lib/api";
 
-type TauriGlobal = { core?: { invoke: (cmd: string) => Promise<unknown> } };
+type Invoker = (cmd: string, args?: unknown) => Promise<unknown>;
 
-function tauri(): TauriGlobal | undefined {
+/**
+ * Tauri's invoke, however this build exposes it. `__TAURI_INTERNALS__.invoke`
+ * is always injected inside the webview; `__TAURI__.core.invoke` exists only
+ * with withGlobalTauri. Returns undefined in a normal browser.
+ */
+function getInvoke(): Invoker | undefined {
   if (typeof window === "undefined") return undefined;
-  return (window as unknown as { __TAURI__?: TauriGlobal }).__TAURI__;
+  const w = window as unknown as {
+    __TAURI_INTERNALS__?: { invoke?: Invoker };
+    __TAURI__?: { core?: { invoke?: Invoker } };
+  };
+  return w.__TAURI_INTERNALS__?.invoke ?? w.__TAURI__?.core?.invoke;
 }
 
 const BUTTON_CLASS =
@@ -26,7 +35,7 @@ export default function ConnectStrava() {
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    setIsDesktop(!!tauri());
+    setIsDesktop(!!getInvoke());
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
@@ -51,7 +60,9 @@ export default function ConnectStrava() {
   const onDesktopClick = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
-      tauri()?.core?.invoke("open_login");
+      getInvoke()?.("open_login").catch(() => {
+        /* command unavailable — the help text offers a manual retry */
+      });
       setWaiting(true);
       startPolling();
     },
