@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Core permissions for the Domestique window.",
   "windows": ["main"],
-  "permissions": ["core:default", "opener:default", "opener:allow-open-url"]
+  "permissions": ["core:default"]
 }

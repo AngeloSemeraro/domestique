@@ -169,26 +169,23 @@ fn start_server(repo: &Path) -> Option<Child> {
         .ok()
 }
 
-/// Open the Strava login in the user's real browser. Apple/Google refuse their
-/// sign-in inside embedded webviews, so the desktop app sends the OAuth flow out
-/// to the system browser; the callback stashes the session and the webview polls
-/// `/api/auth/adopt` to claim it. Invoked from the login screen.
-#[tauri::command]
-fn open_login() {
-    let url = format!("http://localhost:{PORT}/api/auth/login?desktop=1");
+/// Open a URL in the user's real browser.
+fn open_external(url: &str) {
     #[cfg(target_os = "macos")]
-    let _ = Command::new("/usr/bin/open").arg(&url).spawn();
+    let _ = Command::new("/usr/bin/open").arg(url).spawn();
     #[cfg(target_os = "linux")]
-    let _ = Command::new("xdg-open").arg(&url).spawn();
+    let _ = Command::new("xdg-open").arg(url).spawn();
     #[cfg(target_os = "windows")]
-    let _ = Command::new("cmd").args(["/C", "start", "", &url]).spawn();
+    let _ = Command::new("cmd").args(["/C", "start", "", url]).spawn();
 }
+
+// Present the webview as desktop Safari so Strava's "Sign in with Apple/Google"
+// (which the OAuth flow bounces to the system browser anyway) behaves.
+const USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15";
 
 fn main() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
         .manage(ServerProcess(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![open_login])
         .setup(|app| {
             let repo = repo_dir();
             // Start the server unless something already answers on the port.
@@ -198,8 +195,45 @@ fn main() {
                 }
             }
 
+            // Build the window ourselves so we can intercept navigation: the
+            // login flow (and any external link) is opened in the system
+            // browser instead of this embedded webview — Apple/Google refuse to
+            // sign in inside embedded webviews. Returning false cancels the
+            // webview navigation WITHOUT unloading the current page, so the
+            // login screen keeps polling `/api/auth/adopt`. This needs no
+            // command/ACL permission.
+            tauri::WebviewWindowBuilder::new(
+                app,
+                "main",
+                tauri::WebviewUrl::App("index.html".into()),
+            )
+            .title("Domestique")
+            .inner_size(1240.0, 860.0)
+            .min_inner_size(900.0, 600.0)
+            .user_agent(USER_AGENT)
+            .on_navigation(|url| {
+                // The OAuth entry point: open it in the real browser, don't move
+                // the webview.
+                if url.path().starts_with("/api/auth/login") {
+                    open_external(url.as_str());
+                    return false;
+                }
+                // Our own pages: the bundled splash and the local server.
+                let host = url.host_str().unwrap_or("");
+                match url.scheme() {
+                    "tauri" | "about" => true,
+                    _ if host == "localhost" || host == "127.0.0.1" => true,
+                    "http" | "https" => {
+                        open_external(url.as_str());
+                        false
+                    }
+                    _ => true,
+                }
+            })
+            .build()?;
+
             // Poll for the server off the main thread; when it answers, point
-            // the (already visible) splash window at the app and focus it.
+            // the splash window at the app and focus it.
             let handle = app.handle().clone();
             std::thread::spawn(move || {
                 for _ in 0..240 {
