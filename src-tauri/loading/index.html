@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Domestique</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 22px;
+        background: #2b2622;
+        color: #f4a6c0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      .word {
+        font-size: 64px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .sub {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #b98aa0;
+      }
+      .dots { display: flex; gap: 8px; margin-top: 6px; }
+      .dots span {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #f4a6c0;
+        opacity: 0.35;
+        animation: pulse 1.1s ease-in-out infinite;
+      }
+      .dots span:nth-child(2) { animation-delay: 0.18s; }
+      .dots span:nth-child(3) { animation-delay: 0.36s; }
+      @keyframes pulse {
+        0%, 100% { opacity: 0.3; transform: translateY(0); }
+        50% { opacity: 1; transform: translateY(-4px); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="word">Domestique</div>
+    <div class="sub">Avvio in corso…</div>
+    <div class="dots"><span></span><span></span><span></span></div>
+  </body>
+</html>

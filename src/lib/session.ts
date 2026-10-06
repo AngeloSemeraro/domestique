@@ -7,12 +7,17 @@ export type StravaSession = {
   accessToken?: string;
   refreshToken?: string;
   expiresAt?: number;
-  /** RideWithGPS OAuth token (optional integration). */
-  rwgpsAccessToken?: string;
-  rwgpsUserName?: string;
 };
 
 const secret = process.env.SESSION_SECRET ?? "";
+
+// A `Secure` cookie is only sent over HTTPS — and is dropped outright when the
+// app is served over http://localhost (as it is by the desktop app, whose
+// production Next server still runs on plain http). So gate `secure` on the app
+// actually being served over HTTPS, not merely on NODE_ENV=production; otherwise
+// the session cookie never sticks and Strava login silently fails.
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+const isHttps = appUrl.startsWith("https://");
 
 export const sessionOptions: SessionOptions = {
   password: secret,
@@ -20,7 +25,7 @@ export const sessionOptions: SessionOptions = {
   cookieOptions: {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: isHttps,
     maxAge: 60 * 60 * 24 * 30,
   },
 };

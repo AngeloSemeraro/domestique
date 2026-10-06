@@ -20,7 +20,7 @@ export type TrackMapProps = {
   className?: string;
 };
 
-const TRACK_COLOR = "#fc4c02";
+const TRACK_COLOR = "#2563eb"; // electric blue — high contrast on the map
 const DROPPED_COLOR = "#6b7280";
 const WINDOW_COLOR = "#0ea5e9";
 const WAYPOINT_COLOR = "#8b5cf6";
@@ -60,7 +60,7 @@ export default function TrackMap({
     const map = L.map(div, { zoomControl: true, attributionControl: true });
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
-      className: "sbe-basemap",
+      className: "domestique-basemap",
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
     }).addTo(map);
@@ -101,7 +101,7 @@ export default function TrackMap({
     for (const seg of splitByRuns(latlng, runs)) {
       group.addLayer(
         L.polyline(seg.pts, seg.kept
-          ? { color: TRACK_COLOR, weight: 3, opacity: 0.9 }
+          ? { color: TRACK_COLOR, weight: 4, opacity: 1 }
           : { color: DROPPED_COLOR, weight: 2, opacity: 0.6, dashArray: "4 6" })
       );
     }
@@ -204,7 +204,7 @@ export default function TrackMap({
   return (
     <div
       ref={divRef}
-      className={`sbe-map relative w-full overflow-hidden rounded-xl border border-[color:var(--border)] ${
+      className={`domestique-map relative w-full overflow-hidden rounded-xl border border-[color:var(--border)] ${
         className ?? "h-80"
       }`}
     />

@@ -395,7 +395,7 @@ export function StravaPickList({
         <button
           onClick={() => load()}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 rounded-full bg-strava px-3 py-1 text-xs font-semibold text-white shadow-sm shadow-strava/30 transition-all hover:scale-[1.02] disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-full bg-strava px-3 py-1 text-xs font-semibold text-[color:var(--accent-fg)] shadow-sm shadow-strava/30 transition-all hover:scale-[1.02] disabled:opacity-50"
         >
           {loading ? (
             <Loader2 className="h-3 w-3 animate-spin" />

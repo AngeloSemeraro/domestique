@@ -8,5 +8,12 @@ out
 .vercel
 next-env.d.ts
 
-# Local deploy credentials — never commit
-scripts/.env.deploy
+# Desktop app runtime log
+.domestique-server.log
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Tauri build artifacts
+src-tauri/target
+src-tauri/gen

@@ -267,7 +267,7 @@ export default function MergeTab({
           description:
             description ||
             `Merged from: ${sources.map((s) => s.name).join(", ")}`,
-          external_id: `sbe-merge-${Date.now()}`,
+          external_id: `domestique-merge-${Date.now()}`,
         }),
       });
       const upData = await up.json();
@@ -401,7 +401,7 @@ export default function MergeTab({
           </div>
         </div>
 
-        <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-3 text-xs text-blue-700 dark:text-blue-300">
+        <div className="rounded-xl border border-amber-300 bg-amber-100 p-3 text-xs text-amber-900">
           <div className="flex gap-2">
             <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
             <p>
@@ -978,7 +978,7 @@ function OutputCard({
     >
       <div
         className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${
-          checked ? "bg-strava text-white" : "bg-[color:var(--row-hover)] text-[color:var(--fg-muted)]"
+          checked ? "bg-strava text-[color:var(--accent-fg)]" : "bg-[color:var(--row-hover)] text-[color:var(--fg-muted)]"
         }`}
       >
         {icon}

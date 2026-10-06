@@ -10,9 +10,6 @@ type Body = {
   clientSecret: string;
   sessionSecret: string;
   appUrl: string;
-  /** Optional RideWithGPS integration. */
-  rwgpsClientId?: string;
-  rwgpsClientSecret?: string;
 };
 
 function clean(v: unknown): string {
@@ -37,8 +34,6 @@ export async function POST(req: NextRequest) {
   const clientSecret = clean(body.clientSecret);
   const sessionSecret = clean(body.sessionSecret);
   const appUrl = clean(body.appUrl) || "http://localhost:3000";
-  const rwgpsClientId = clean(body.rwgpsClientId);
-  const rwgpsClientSecret = clean(body.rwgpsClientSecret);
 
   if (!clientId || !clientSecret) {
     return NextResponse.json(
@@ -52,16 +47,7 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
-  if (
-    /[\r\n]/.test(
-      clientId +
-        clientSecret +
-        sessionSecret +
-        appUrl +
-        rwgpsClientId +
-        rwgpsClientSecret
-    )
-  ) {
+  if (/[\r\n]/.test(clientId + clientSecret + sessionSecret + appUrl)) {
     return NextResponse.json(
       { error: "values must not contain newlines" },
       { status: 400 }
@@ -76,13 +62,6 @@ export async function POST(req: NextRequest) {
     `NEXT_PUBLIC_APP_URL=${appUrl}`,
     `SESSION_SECRET=${sessionSecret}`,
   ];
-  // Only write RideWithGPS keys when both were provided (optional integration).
-  if (rwgpsClientId && rwgpsClientSecret) {
-    lines.push(
-      `RWGPS_CLIENT_ID=${rwgpsClientId}`,
-      `RWGPS_CLIENT_SECRET=${rwgpsClientSecret}`
-    );
-  }
   const contents = lines.join("\n") + "\n";
 
   try {

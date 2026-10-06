@@ -14,7 +14,8 @@ import {
   Loader2,
   Sparkles,
 } from "lucide-react";
-import AppLogo from "./AppLogo";
+import Wordmark from "./Wordmark";
+import { CONTAINER_MAX, CONTAINER_PAD } from "./DomestiqueHeader";
 
 type Status = { missing: string[]; selfHosted: boolean };
 
@@ -29,8 +30,6 @@ export default function OnboardingWizard({
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [sessionSecret, setSessionSecret] = useState("");
-  const [rwgpsClientId, setRwgpsClientId] = useState("");
-  const [rwgpsClientSecret, setRwgpsClientSecret] = useState("");
   const [showSecret, setShowSecret] = useState(false);
   const [showSession, setShowSession] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -72,8 +71,6 @@ export default function OnboardingWizard({
           clientSecret: clientSecret.trim(),
           sessionSecret: sessionSecret.trim(),
           appUrl,
-          rwgpsClientId: rwgpsClientId.trim(),
-          rwgpsClientSecret: rwgpsClientSecret.trim(),
         }),
       });
       const data = await res.json();
@@ -100,23 +97,28 @@ export default function OnboardingWizard({
     sessionSecret.trim().length >= 32;
 
   return (
-    <main className="flex min-h-screen flex-col items-center bg-[color:var(--bg)] p-4 md:p-8">
-      <div className="w-full max-w-2xl space-y-6">
-        <header className="animate-fade-in flex items-center gap-3">
-          <AppLogo size={40} />
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">
-              Domestique
-            </h1>
-            <p className="text-xs text-[color:var(--fg-muted)]">
-              First-run setup
-            </p>
-          </div>
-        </header>
+    <main className="flex min-h-screen flex-col bg-[color:var(--header-bg)] text-[color:var(--fg)]">
+      <header
+        className="animate-fade-in pt-6 md:pt-8"
+        style={{
+          maxWidth: CONTAINER_MAX,
+          marginInline: "auto",
+          width: "100%",
+          paddingLeft: CONTAINER_PAD,
+          paddingRight: CONTAINER_PAD,
+        }}
+      >
+        <Wordmark className="block h-auto w-[clamp(190px,30vw,340px)] text-[color:var(--accent)]" />
+        <p className="mt-1 text-[clamp(0.65rem,1.4vw,0.9rem)] font-extrabold uppercase tracking-[0.14em] text-[color:var(--accent)]">
+          Does the dirty work for your rides
+        </p>
+      </header>
 
-        <Stepper current={step} total={4} />
+      <div className="flex w-full flex-1 justify-center px-4 pb-12 pt-8 md:pt-12">
+        <div className="w-full max-w-2xl space-y-6">
+          <Stepper current={step} total={4} />
 
-        <section className="animate-scale-in rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-5 shadow-sm md:p-6">
+          <section className="animate-scale-in rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-5 shadow-lg md:p-7">
           {step === 0 && (
             <WelcomeStep
               missing={status.missing}
@@ -136,11 +138,6 @@ export default function OnboardingWizard({
               setShowSecret={setShowSecret}
               showSession={showSession}
               setShowSession={setShowSession}
-              rwgpsClientId={rwgpsClientId}
-              setRwgpsClientId={setRwgpsClientId}
-              rwgpsClientSecret={rwgpsClientSecret}
-              setRwgpsClientSecret={setRwgpsClientSecret}
-              appUrl={appUrl}
             />
           )}
           {step === 3 && (
@@ -149,8 +146,6 @@ export default function OnboardingWizard({
               clientSecret={clientSecret}
               sessionSecret={sessionSecret}
               appUrl={appUrl}
-              rwgpsClientId={rwgpsClientId}
-              rwgpsClientSecret={rwgpsClientSecret}
               selfHosted={status.selfHosted}
               saving={saving}
               saved={saved}
@@ -172,14 +167,15 @@ export default function OnboardingWizard({
               <button
                 onClick={() => setStep((s) => s + 1)}
                 disabled={step === 2 && !canAdvanceFromStep2}
-                className="inline-flex items-center gap-1.5 rounded-full bg-strava px-4 py-1.5 text-sm font-semibold text-white shadow-sm shadow-strava/30 transition-all hover:scale-[1.02] disabled:opacity-40"
+                className="inline-flex items-center gap-1.5 rounded-full bg-strava px-4 py-1.5 text-sm font-semibold text-[color:var(--accent-fg)] shadow-sm shadow-strava/30 transition-all hover:scale-[1.02] disabled:opacity-40"
               >
                 Next
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
-        </section>
+          </section>
+        </div>
       </div>
     </main>
   );
@@ -192,7 +188,7 @@ function Stepper({ current, total }: { current: number; total: number }) {
         <div
           key={i}
           className={`h-1.5 flex-1 rounded-full transition-colors ${
-            i <= current ? "bg-strava" : "bg-[color:var(--border)]"
+            i <= current ? "bg-strava" : "bg-[color:var(--tab-inactive)]"
           }`}
         />
       ))}
@@ -272,7 +268,7 @@ function CreateAppStep({ callbackDomain }: { callbackDomain: string }) {
         href="https://www.strava.com/settings/api"
         target="_blank"
         rel="noreferrer"
-        className="inline-flex items-center gap-2 rounded-full bg-strava px-4 py-2 text-sm font-semibold !text-white shadow-md shadow-strava/30 transition-all hover:scale-[1.02]"
+        className="inline-flex items-center gap-2 rounded-full bg-strava px-4 py-2 text-sm font-semibold !text-[color:var(--accent-fg)] shadow-md shadow-strava/30 transition-all hover:scale-[1.02]"
       >
         Open Strava API settings
         <ExternalLink className="h-3.5 w-3.5" />
@@ -316,11 +312,6 @@ function CredentialsStep({
   setShowSecret,
   showSession,
   setShowSession,
-  rwgpsClientId,
-  setRwgpsClientId,
-  rwgpsClientSecret,
-  setRwgpsClientSecret,
-  appUrl,
 }: {
   clientId: string;
   setClientId: (v: string) => void;
@@ -332,11 +323,6 @@ function CredentialsStep({
   setShowSecret: (b: boolean) => void;
   showSession: boolean;
   setShowSession: (b: boolean) => void;
-  rwgpsClientId: string;
-  setRwgpsClientId: (v: string) => void;
-  rwgpsClientSecret: string;
-  setRwgpsClientSecret: (v: string) => void;
-  appUrl: string;
 }) {
   return (
     <div className="space-y-4">
@@ -427,63 +413,6 @@ function CredentialsStep({
           Used to encrypt the session cookie. Never sent to Strava.
         </p>
       </label>
-
-      <details className="rounded-lg border border-[color:var(--border)] bg-[color:var(--bg-input)] p-3">
-        <summary className="cursor-pointer text-sm font-medium">
-          RideWithGPS upload{" "}
-          <span className="font-normal text-[color:var(--fg-muted)]">
-            — optional, you can skip this
-          </span>
-        </summary>
-        <div className="mt-3 space-y-3">
-          <p className="text-xs leading-relaxed text-[color:var(--fg-muted)]">
-            Lets you upload activities straight to your RideWithGPS library.
-            On{" "}
-            <a
-              href="https://ridewithgps.com/api"
-              target="_blank"
-              rel="noreferrer"
-              className="text-strava hover:underline"
-            >
-              ridewithgps.com
-            </a>{" "}
-            open <strong>Account Settings → Developers</strong> and create an
-            API client. On that client, turn on <strong>OAuth</strong> and set
-            its <strong>Redirect URI</strong> to:
-          </p>
-          <code className="block break-all rounded border border-[color:var(--border)] bg-[color:var(--bg-elev)] px-2 py-1.5 text-xs">
-            {appUrl.replace(/\/$/, "")}/api/rwgps/auth/callback
-          </code>
-          <p className="text-xs text-[color:var(--fg-muted)]">
-            Then copy the <strong>OAuth</strong> Client ID and Secret (not the
-            plain API key):
-          </p>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-xs uppercase tracking-wider text-[color:var(--fg-muted)]">
-              RideWithGPS OAuth Client ID
-            </span>
-            <input
-              type="text"
-              value={rwgpsClientId}
-              onChange={(e) => setRwgpsClientId(e.target.value)}
-              placeholder="from your API client"
-              className="rounded-lg border border-[color:var(--border)] bg-[color:var(--bg-elev)] px-3 py-2 font-mono text-sm"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-xs uppercase tracking-wider text-[color:var(--fg-muted)]">
-              RideWithGPS OAuth Client Secret
-            </span>
-            <input
-              type="password"
-              value={rwgpsClientSecret}
-              onChange={(e) => setRwgpsClientSecret(e.target.value)}
-              placeholder="from your API client"
-              className="rounded-lg border border-[color:var(--border)] bg-[color:var(--bg-elev)] px-3 py-2 font-mono text-sm"
-            />
-          </label>
-        </div>
-      </details>
     </div>
   );
 }
@@ -493,8 +422,6 @@ function SaveStep({
   clientSecret,
   sessionSecret,
   appUrl,
-  rwgpsClientId,
-  rwgpsClientSecret,
   selfHosted,
   saving,
   saved,
@@ -505,8 +432,6 @@ function SaveStep({
   clientSecret: string;
   sessionSecret: string;
   appUrl: string;
-  rwgpsClientId: string;
-  rwgpsClientSecret: string;
   selfHosted: boolean;
   saving: boolean;
   saved: boolean;
@@ -518,12 +443,6 @@ function SaveStep({
     `STRAVA_CLIENT_SECRET=${clientSecret}`,
     `NEXT_PUBLIC_APP_URL=${appUrl}`,
     `SESSION_SECRET=${sessionSecret}`,
-    ...(rwgpsClientId.trim() && rwgpsClientSecret.trim()
-      ? [
-          `RWGPS_CLIENT_ID=${rwgpsClientId.trim()}`,
-          `RWGPS_CLIENT_SECRET=${rwgpsClientSecret.trim()}`,
-        ]
-      : []),
   ].join("\n");
 
   function setOnceUnused(_: unknown) {
@@ -553,7 +472,7 @@ function SaveStep({
         </p>
         <a
           href="/"
-          className="inline-flex items-center gap-2 rounded-full bg-strava px-4 py-2 text-sm font-semibold !text-white shadow-md shadow-strava/30 transition-all hover:scale-[1.02]"
+          className="inline-flex items-center gap-2 rounded-full bg-strava px-4 py-2 text-sm font-semibold !text-[color:var(--accent-fg)] shadow-md shadow-strava/30 transition-all hover:scale-[1.02]"
         >
           Reload
           <ArrowRight className="h-3.5 w-3.5" />

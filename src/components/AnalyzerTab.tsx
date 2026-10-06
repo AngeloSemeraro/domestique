@@ -218,7 +218,7 @@ export default function AnalyzerTab({
           dataType: "tcx",
           name,
           description,
-          external_id: `sbe-analyzer-${Date.now()}`,
+          external_id: `domestique-analyzer-${Date.now()}`,
         }),
       });
       const upData = await up.json();
@@ -341,7 +341,7 @@ export default function AnalyzerTab({
             </div>
 
             {(!analysis.hasHR && !analysis.hasCad) && (
-              <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-300">
+              <div className="mt-3 rounded-lg border border-amber-300 bg-amber-100 p-2 text-xs text-amber-900">
                 <Info className="mr-1 inline h-3 w-3" />
                 No HR or cadence data — only speed range can be used to detect
                 train/car. Tighten Max km/h aggressively.
@@ -349,7 +349,7 @@ export default function AnalyzerTab({
             )}
 
             {file.has_time === false && (
-              <div className="mt-3 rounded-lg border border-sky-500/30 bg-sky-500/5 p-2 text-xs text-sky-700 dark:text-sky-300">
+              <div className="mt-3 rounded-lg border border-amber-300 bg-amber-100 p-2 text-xs text-amber-900">
                 <Info className="mr-1 inline h-3 w-3" />
                 This file has no timestamps — synthetic times (1 s per point)
                 were generated so charts, downloads and Strava upload still
@@ -420,6 +420,66 @@ export default function AnalyzerTab({
           )}
 
           <section className="animate-fade-in rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-4 md:p-5 shadow-sm">
+            <h3 className="mb-3 font-semibold tracking-tight">Charts</h3>
+            <div className="space-y-4">
+              <StreamChart
+                title="Speed"
+                unit="km/h"
+                color="#ef95b0"
+                icon={<ActivityIcon className="h-3.5 w-3.5" />}
+                series={speedSeries}
+                runs={analysis.runs}
+                totalPoints={file.point_count}
+                seamIndices={file.seamIndices}
+                viewRange={viewRange}
+                hoverIdx={hoverIdx}
+                onHover={setHoverIdx}
+              />
+              {analysis.hasHR && (
+                <StreamChart
+                  title="Heart rate"
+                  unit="bpm"
+                  color="#ef4444"
+                  icon={<Heart className="h-3.5 w-3.5" />}
+                  series={(file.streams.heartrate?.data ?? []).map((v) =>
+                    typeof v === "number" ? v : null
+                  )}
+                  runs={analysis.runs}
+                  totalPoints={file.point_count}
+                  seamIndices={file.seamIndices}
+                  viewRange={viewRange}
+                  hoverIdx={hoverIdx}
+                  onHover={setHoverIdx}
+                />
+              )}
+              {analysis.hasCad && (
+                <StreamChart
+                  title="Cadence"
+                  unit="rpm"
+                  color="#10b981"
+                  icon={<RotateCcw className="h-3.5 w-3.5" />}
+                  series={(file.streams.cadence?.data ?? []).map((v) =>
+                    typeof v === "number" ? v : null
+                  )}
+                  runs={analysis.runs}
+                  totalPoints={file.point_count}
+                  seamIndices={file.seamIndices}
+                  viewRange={viewRange}
+                  hoverIdx={hoverIdx}
+                  onHover={setHoverIdx}
+                />
+              )}
+            </div>
+            <p className="mt-2 text-xs text-[color:var(--fg-muted)]">
+              <span className="inline-block h-2 w-3 rounded bg-strava align-middle"></span>{" "}
+              kept ·{" "}
+              <span className="inline-block h-2 w-3 rounded bg-[color:var(--fg-muted)]/30 align-middle"></span>{" "}
+              dropped · hover to pin the position on the map
+              {viewRange && " · charts follow the elevation zoom window"}
+            </p>
+          </section>
+
+          <section className="animate-fade-in rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-4 md:p-5 shadow-sm">
             <div className="mb-3 flex items-center justify-between gap-2">
               <h3 className="font-semibold tracking-tight">Movement filter</h3>
               <button
@@ -444,108 +504,118 @@ export default function AnalyzerTab({
             </label>
 
             {movement.enabled && (
-              <div className="mt-3 grid grid-cols-2 gap-3 text-xs md:grid-cols-3">
-                <NumberField
-                  label="Min km/h"
-                  hint="below this = stop / pause"
-                  value={movement.minKmh}
-                  step={0.5}
-                  onChange={(v) => setMovement({ ...movement, minKmh: v })}
-                />
-                <NumberField
-                  label="Max km/h"
-                  hint="above this = car / train"
-                  value={movement.maxKmh}
-                  step={1}
-                  onChange={(v) => setMovement({ ...movement, maxKmh: v })}
-                />
-                <NumberField
-                  label="Min run pts"
-                  hint="ignore segments shorter than N points (anti-noise)"
-                  value={movement.minRunPoints}
-                  step={1}
-                  onChange={(v) =>
-                    setMovement({ ...movement, minRunPoints: Math.max(1, v) })
-                  }
-                />
-                <NumberField
-                  label="Max jump (km)"
-                  hint="distance between 2 points above this = teleport, skipped"
-                  value={movement.maxJumpKm}
-                  step={0.5}
-                  onChange={(v) =>
-                    setMovement({ ...movement, maxJumpKm: Math.max(0.1, v) })
-                  }
-                />
-                <label className="col-span-2 flex items-center gap-2 md:col-span-3">
-                  <input
-                    type="checkbox"
-                    checked={movement.useCadence}
-                    onChange={(e) =>
-                      setMovement({ ...movement, useCadence: e.target.checked })
-                    }
-                    className="accent-strava"
-                    disabled={!analysis.hasCad}
+              <div className="mt-3 space-y-2.5 text-xs">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+                  <NumberField
+                    label="Min km/h"
+                    hint="below this = stop / pause"
+                    value={movement.minKmh}
+                    step={0.5}
+                    onChange={(v) => setMovement({ ...movement, minKmh: v })}
                   />
-                  Drop segments with avg cadence below
-                  <input
-                    type="number"
-                    min="0"
-                    value={movement.minAvgCadenceRpm}
-                    disabled={!movement.useCadence || !analysis.hasCad}
-                    onChange={(e) =>
-                      setMovement({
-                        ...movement,
-                        minAvgCadenceRpm: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="w-16 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-1.5 py-0.5 disabled:opacity-50"
+                  <NumberField
+                    label="Max km/h"
+                    hint="above this = car / train"
+                    value={movement.maxKmh}
+                    step={1}
+                    onChange={(v) => setMovement({ ...movement, maxKmh: v })}
                   />
-                  rpm
-                  <span className="text-[color:var(--fg-muted)] opacity-70">
-                    (≈ 0 sustained = not pedaling: train, car, parked)
-                  </span>
-                  {!analysis.hasCad && <span className="text-amber-500">— no data</span>}
-                </label>
-                <label className="col-span-2 flex items-center gap-2 md:col-span-3">
-                  <input
-                    type="checkbox"
-                    checked={movement.useHeartRate}
-                    onChange={(e) =>
-                      setMovement({ ...movement, useHeartRate: e.target.checked })
+                  <NumberField
+                    label="Min pts"
+                    hint="ignore segments shorter than N points (anti-noise)"
+                    value={movement.minRunPoints}
+                    step={1}
+                    onChange={(v) =>
+                      setMovement({ ...movement, minRunPoints: Math.max(1, v) })
                     }
-                    className="accent-strava"
-                    disabled={!analysis.hasHR}
                   />
-                  Drop segments with avg HR below
-                  <input
-                    type="number"
-                    min="0"
-                    value={movement.minAvgHeartRate}
-                    disabled={!movement.useHeartRate || !analysis.hasHR}
-                    onChange={(e) =>
-                      setMovement({
-                        ...movement,
-                        minAvgHeartRate: parseFloat(e.target.value) || 0,
-                      })
+                  <NumberField
+                    label="Max jump km"
+                    hint="distance between 2 points above this = teleport, skipped"
+                    value={movement.maxJumpKm}
+                    step={0.5}
+                    onChange={(v) =>
+                      setMovement({ ...movement, maxJumpKm: Math.max(0.1, v) })
                     }
-                    className="w-16 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-1.5 py-0.5 disabled:opacity-50"
                   />
-                  bpm
-                  <span className="text-[color:var(--fg-muted)] opacity-70">
-                    (below this = at rest: sitting, riding in vehicle)
-                  </span>
-                  {!analysis.hasHR && <span className="text-amber-500">— no data</span>}
-                </label>
-                {movement.useCadence && movement.useHeartRate && analysis.hasCad && analysis.hasHR && (
-                  <p className="col-span-2 text-xs text-[color:var(--fg-muted)] md:col-span-3">
-                    <Info className="mr-1 inline h-3 w-3" />
-                    A segment is dropped only when{" "}
-                    <strong>both</strong> cadence AND HR are below threshold.
-                    Long freewheel descents (cadence 0, HR still elevated) are
-                    kept; train/car (cadence 0 AND HR at rest) are dropped.
-                  </p>
-                )}
+                </div>
+                <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                  <label
+                    className="flex items-center gap-2"
+                    title="≈ 0 sustained = not pedaling (train, car, parked). Kept unless HR is also low."
+                  >
+                    <input
+                      type="checkbox"
+                      checked={movement.useCadence}
+                      onChange={(e) =>
+                        setMovement({ ...movement, useCadence: e.target.checked })
+                      }
+                      className="accent-strava"
+                      disabled={!analysis.hasCad}
+                    />
+                    <span className="whitespace-nowrap">Avg cadence below</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={movement.minAvgCadenceRpm}
+                      disabled={!movement.useCadence || !analysis.hasCad}
+                      onChange={(e) =>
+                        setMovement({
+                          ...movement,
+                          minAvgCadenceRpm: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="w-14 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-1.5 py-0.5 text-right disabled:opacity-50"
+                    />
+                    <span className="text-[color:var(--fg-muted)]">rpm</span>
+                    {!analysis.hasCad && (
+                      <span className="text-amber-500">no data</span>
+                    )}
+                  </label>
+                  <label
+                    className="flex items-center gap-2"
+                    title="below this = at rest (sitting, riding in a vehicle)"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={movement.useHeartRate}
+                      onChange={(e) =>
+                        setMovement({ ...movement, useHeartRate: e.target.checked })
+                      }
+                      className="accent-strava"
+                      disabled={!analysis.hasHR}
+                    />
+                    <span className="whitespace-nowrap">Avg HR below</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={movement.minAvgHeartRate}
+                      disabled={!movement.useHeartRate || !analysis.hasHR}
+                      onChange={(e) =>
+                        setMovement({
+                          ...movement,
+                          minAvgHeartRate: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="w-14 rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-1.5 py-0.5 text-right disabled:opacity-50"
+                    />
+                    <span className="text-[color:var(--fg-muted)]">bpm</span>
+                    {!analysis.hasHR && (
+                      <span className="text-amber-500">no data</span>
+                    )}
+                  </label>
+                </div>
+                {movement.useCadence &&
+                  movement.useHeartRate &&
+                  analysis.hasCad &&
+                  analysis.hasHR && (
+                    <p className="text-[color:var(--fg-muted)]">
+                      <Info className="mr-1 inline h-3 w-3" />
+                      A segment is dropped only when <strong>both</strong>{" "}
+                      cadence AND HR are below threshold — freewheel descents
+                      stay, train/car are dropped.
+                    </p>
+                  )}
               </div>
             )}
 
@@ -577,63 +647,6 @@ export default function AnalyzerTab({
                 bad={analysis.totalSec > analysis.keptSec}
               />
             </div>
-          </section>
-
-          <section className="animate-fade-in rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-4 md:p-5 shadow-sm">
-            <h3 className="mb-3 font-semibold tracking-tight">Charts</h3>
-            <div className="space-y-4">
-              <StreamChart
-                title="Speed"
-                unit="km/h"
-                color="#fc4c02"
-                icon={<ActivityIcon className="h-3.5 w-3.5" />}
-                series={speedSeries}
-                runs={analysis.runs}
-                totalPoints={file.point_count}
-                seamIndices={file.seamIndices}
-                viewRange={viewRange}
-                hoverIdx={hoverIdx}
-              />
-              {analysis.hasHR && (
-                <StreamChart
-                  title="Heart rate"
-                  unit="bpm"
-                  color="#ef4444"
-                  icon={<Heart className="h-3.5 w-3.5" />}
-                  series={(file.streams.heartrate?.data ?? []).map((v) =>
-                    typeof v === "number" ? v : null
-                  )}
-                  runs={analysis.runs}
-                  totalPoints={file.point_count}
-                  seamIndices={file.seamIndices}
-                  viewRange={viewRange}
-                  hoverIdx={hoverIdx}
-                />
-              )}
-              {analysis.hasCad && (
-                <StreamChart
-                  title="Cadence"
-                  unit="rpm"
-                  color="#10b981"
-                  icon={<RotateCcw className="h-3.5 w-3.5" />}
-                  series={(file.streams.cadence?.data ?? []).map((v) =>
-                    typeof v === "number" ? v : null
-                  )}
-                  runs={analysis.runs}
-                  totalPoints={file.point_count}
-                  seamIndices={file.seamIndices}
-                  viewRange={viewRange}
-                  hoverIdx={hoverIdx}
-                />
-              )}
-            </div>
-            <p className="mt-2 text-xs text-[color:var(--fg-muted)]">
-              <span className="inline-block h-2 w-3 rounded bg-strava align-middle"></span>{" "}
-              kept ·{" "}
-              <span className="inline-block h-2 w-3 rounded bg-[color:var(--fg-muted)]/30 align-middle"></span>{" "}
-              dropped
-              {viewRange && " · charts follow the elevation zoom window"}
-            </p>
           </section>
 
           <section className="animate-fade-in rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-elev)] p-4 md:p-5 shadow-sm">
@@ -747,19 +760,16 @@ function NumberField({
   onChange: (n: number) => void;
 }) {
   return (
-    <label className="flex flex-col gap-1">
-      <span className="text-[color:var(--fg-muted)]">
+    <label className="flex flex-col gap-1" title={hint}>
+      <span className="text-[10px] font-medium uppercase tracking-wider text-[color:var(--fg-muted)]">
         {label}
-        {hint && (
-          <span className="ml-1 normal-case opacity-70">({hint})</span>
-        )}
       </span>
       <input
         type="number"
         step={step}
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-        className="rounded border border-[color:var(--border)] bg-[color:var(--bg-input)] px-2 py-1"
+        className="w-full rounded-md border border-[color:var(--border)] bg-[color:var(--bg-input)] px-2 py-1 text-right tabular-nums"
       />
     </label>
   );
@@ -806,6 +816,7 @@ function StreamChart({
   seamIndices,
   viewRange,
   hoverIdx,
+  onHover,
 }: {
   title: string;
   unit: string;
@@ -818,6 +829,8 @@ function StreamChart({
   /** Zoom window shared with the elevation profile; null = full track. */
   viewRange?: [number, number] | null;
   hoverIdx?: number | null;
+  /** Hovering the chart drives the shared crosshair on the map + siblings. */
+  onHover?: (idx: number | null) => void;
 }) {
   const W = 1000;
   const H = 80;
@@ -826,6 +839,26 @@ function StreamChart({
   const a = viewRange ? Math.max(0, Math.min(viewRange[0], last)) : 0;
   const b = viewRange ? Math.max(a, Math.min(viewRange[1], last)) : last;
   const step = Math.max(1, Math.ceil((b - a + 1) / targetSamples));
+
+  // Map a pointer position to the nearest track index within the window.
+  const idxFromClientX = (clientX: number, el: SVGSVGElement): number => {
+    const rect = el.getBoundingClientRect();
+    const frac = rect.width > 0 ? (clientX - rect.left) / rect.width : 0;
+    return Math.round(a + Math.max(0, Math.min(1, frac)) * (b - a));
+  };
+  // Nearest finite value to hoverIdx (series has gaps at teleports), for the
+  // marker dot + readout.
+  const hoverActive =
+    typeof hoverIdx === "number" && hoverIdx >= a && hoverIdx <= b;
+  let hoverVal: number | null = null;
+  if (hoverActive) {
+    for (let d = 0; d <= 4; d++) {
+      const lv = series[hoverIdx! - d];
+      const rv = series[hoverIdx! + d];
+      if (typeof lv === "number" && Number.isFinite(lv)) { hoverVal = lv; break; }
+      if (typeof rv === "number" && Number.isFinite(rv)) { hoverVal = rv; break; }
+    }
+  }
 
   const samples: Array<{ x: number; v: number | null; kept: boolean }> = [];
   for (let i = a; i <= b; i += step) {
@@ -878,13 +911,23 @@ function StreamChart({
           {title}
         </span>
         <span className="font-mono text-[color:var(--fg-muted)]">
-          {min.toFixed(0)} – {max.toFixed(0)} {unit}
+          {hoverVal !== null ? (
+            <span className="font-semibold" style={{ color }}>
+              {hoverVal.toFixed(0)} {unit}
+            </span>
+          ) : (
+            <>
+              {min.toFixed(0)} – {max.toFixed(0)} {unit}
+            </>
+          )}
         </span>
       </div>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
-        className="block h-16 w-full rounded bg-[color:var(--bg-input)]"
+        className="block h-16 w-full cursor-crosshair touch-none rounded bg-[color:var(--bg-input)]"
+        onPointerMove={(e) => onHover?.(idxFromClientX(e.clientX, e.currentTarget))}
+        onPointerLeave={() => onHover?.(null)}
       >
         {segs.map((s, i) => (
           <path

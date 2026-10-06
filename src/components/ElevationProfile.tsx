@@ -574,7 +574,11 @@ export default function ElevationProfile({
             >
               <div>{base.dist[activeIdx].toFixed(2)} km</div>
               <div>{Math.round(base.alt[activeIdx])} m</div>
-              <div style={{ color: gradeColor(g) }}>
+              <div className="flex items-center gap-1 font-semibold text-[color:var(--fg)]">
+                <span
+                  className="inline-block h-2 w-2 flex-none rounded-[2px]"
+                  style={{ background: gradeColor(g) }}
+                />
                 {g >= 0 ? "+" : ""}
                 {g.toFixed(1)}%
               </div>
