@@ -20,7 +20,7 @@ export type TrackMapProps = {
   className?: string;
 };
 
-const TRACK_COLOR = "#ef95b0";
+const TRACK_COLOR = "#2563eb"; // electric blue — high contrast on the map
 const DROPPED_COLOR = "#6b7280";
 const WINDOW_COLOR = "#0ea5e9";
 const WAYPOINT_COLOR = "#8b5cf6";
@@ -101,7 +101,7 @@ export default function TrackMap({
     for (const seg of splitByRuns(latlng, runs)) {
       group.addLayer(
         L.polyline(seg.pts, seg.kept
-          ? { color: TRACK_COLOR, weight: 3, opacity: 0.9 }
+          ? { color: TRACK_COLOR, weight: 4, opacity: 1 }
           : { color: DROPPED_COLOR, weight: 2, opacity: 0.6, dashArray: "4 6" })
       );
     }
